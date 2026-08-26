@@ -544,6 +544,7 @@ const DEMO_PROFILES = [
 /* ================= STATE STORE ================= */
 const STORAGE_KEY = 'accountix_os_data_v1';
 let STATE = {
+  isAuthenticated: false, // Show 3-Option Executive Sign-In & Login Gateway first
   currentUser: { ...DEMO_PROFILES[1] }, // Default to Agency Manager
   companies: [
     { id: 'comp_1', name: 'AccountiX Media HQ', plan: 'Enterprise Suite', status: 'Active', ownerEmail: 'jeet@accountix.agency', createdAt: '2026-01-15', usersCount: 8, mrr: 14999 },
@@ -1020,6 +1021,15 @@ function buildNotifications() {
 /* ================= RENDER SHELL ================= */
 function render() {
   const appEl = document.getElementById('app');
+  if (!appEl) return;
+
+  // 1. If not authenticated, render the dedicated 3-Option Executive Sign-In & Login Gateway
+  if (!STATE.isAuthenticated) {
+    appEl.innerHTML = renderLandingGateway();
+    attachLandingGateway();
+    return;
+  }
+
   const notifs = buildNotifications();
   const urgentCount = notifs.filter(n => n.urgent).length;
   const settings = STATE.settings;
@@ -1027,7 +1037,7 @@ function render() {
   const user = STATE.currentUser || DEMO_PROFILES[1];
   const navItems = getNavItems();
 
-  const roleTitle = user.role === 'admin' ? 'Super Admin' : user.role === 'manager' ? 'Agency Manager' : 'Staff Member';
+  const roleTitle = user.role === 'admin' ? 'Super Admin' : user.role === 'manager' ? 'Managing Director' : 'Staff Specialist';
   const roleBadgeColor = user.role === 'admin' ? 'background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3);' : user.role === 'manager' ? 'background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);' : 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);';
 
   appEl.innerHTML = `
@@ -1055,11 +1065,11 @@ function render() {
       </div>
 
       <div class="sidebar-footer">
-        <div class="owner-pill" onclick="openAuthModal()" style="cursor:pointer;" title="Click to Switch Portal Role or Log In">
+        <div class="owner-pill" onclick="logoutGateway()" style="cursor:pointer;" title="Click to Sign Out & Return to Identity Gateway">
           <div class="owner-avatar">${user.avatar || '👤'}</div>
           <div class="owner-info">
             <div><b>${esc(user.name)}</b></div>
-            <span style="font-size:11px; text-transform:uppercase;">${esc(roleTitle)} · Switch ➔</span>
+            <span style="font-size:11px; color:var(--accent-rose); font-weight:700;">🚪 Sign Out / Switch</span>
           </div>
         </div>
       </div>
@@ -1074,12 +1084,19 @@ function render() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>
           
-          <!-- Role Switcher & Auth Pill in Topbar -->
+          <!-- Active Portal Identity Pill -->
           <button class="btn btn-ghost btn-sm" id="topbarRoleBtn" style="${roleBadgeColor} font-weight:700;" title="Switch Role / Google Auth">
             <span>${user.avatar || '👤'}</span>
             <span>${esc(user.name)}</span>
-            <span style="font-size:10px; opacity:0.8;">(${esc(user.role.toUpperCase())}) ▼</span>
+            <span style="font-size:10px; opacity:0.8;">(${esc(user.role.toUpperCase())})</span>
           </button>
+
+          <!-- Plan Badge & Upgrade Option for Managing Director -->
+          ${user.role === 'manager' ? `
+            <button class="btn btn-ghost btn-sm" onclick="openAgencyPlanModal()" style="border:1px solid rgba(16,185,129,0.35); color:var(--signal-cash); font-weight:700;" title="Current Subscription Plan (Click to Upgrade)">
+              💳 ${esc(user.plan || 'Pro Agency')} · Upgrade
+            </button>
+          ` : ''}
 
           ${isSupabaseConnected() ? `
             <div class="pulse-badge" id="topbarSupabaseBadge" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--signal-cash); cursor:pointer;" title="Supabase Cloud Live (Click to configure in Settings)">
@@ -1097,6 +1114,7 @@ function render() {
             <span class="cmd-shortcut">Ctrl+K</span>
           </div>
         </div>
+
         <div class="topbar-actions">
           ${user.role === 'manager' ? `
             <button class="btn btn-ghost btn-sm" id="topbarPricingBtn" title="Manager Package Pricing Catalog">
@@ -1104,28 +1122,34 @@ function render() {
             </button>
           ` : user.role === 'admin' ? `
             <button class="btn btn-signal btn-sm" onclick="STATE.view='admin_reengage'; renderMain();">
-              ✉️ Re-Engage Inactive (${STATE.allUsers.filter(u => u.status.includes('Inactive') || u.status.includes('Idle') || u.status.includes('Never')).length})
+              ✉️ Re-Engage (${STATE.allUsers.filter(u => u.status.includes('Inactive') || u.status.includes('Idle') || u.status.includes('Never')).length})
             </button>
           ` : `
             <button class="btn btn-signal btn-sm" onclick="empPunchToday('Present')">
               🕒 Clock In
             </button>
           `}
+          
           <button class="btn-icon" id="themeToggleBtn" title="Switch Theme (${isDark ? 'Light' : 'Dark'})">
             ${isDark ? '☀️' : '🌙'}
           </button>
           <button class="btn-icon" id="notifBtn" title="Alerts & Reminders">
             🔔 ${urgentCount > 0 ? `<span class="notif-dot">${urgentCount}</span>` : ''}
           </button>
+
           ${user.role === 'manager' ? `
             <button class="btn btn-primary" id="quickAddBtn">
               <span>⚡</span> Quick Add
             </button>
           ` : `
             <button class="btn btn-primary" onclick="openAuthModal()">
-              <span>🔐</span> Auth / Switch
+              <span>🔐</span> Switch Role
             </button>
           `}
+
+          <button class="btn btn-ghost btn-sm" onclick="logoutGateway()" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3); font-weight:700;" title="Sign Out & Return to Identity Gateway">
+            🚪 Sign Out
+          </button>
         </div>
       </div>
       <main id="mainContainer"></main>
@@ -1169,6 +1193,398 @@ function render() {
   renderMain();
 }
 
+/* ================= 3-OPTION EXECUTIVE AUTH & LOGIN GATEWAY ================= */
+function renderLandingGateway() {
+  const isDark = (STATE.settings.theme || 'dark') === 'dark';
+  const staffList = STATE.staff || [];
+
+  return `
+    <div style="min-height:100vh; width:100%; background:radial-gradient(ellipse at top, #1e1b4b 0%, #09090b 70%); display:flex; flex-direction:column; justify-content:center; align-items:center; padding:36px 20px; box-sizing:border-box; font-family:'Plus Jakarta Sans', sans-serif;">
+      
+      <!-- Top Brand Nav -->
+      <div style="width:100%; max-width:1180px; display:flex; justify-content:space-between; align-items:center; margin-bottom:36px; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:44px; height:44px; background:linear-gradient(135deg, #6366f1, #a855f7); border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:22px; color:#fff; box-shadow:0 0 24px rgba(99,102,241,0.45);">AX</div>
+          <div>
+            <div style="font-size:22px; font-weight:800; font-family:'Space Grotesk', sans-serif; letter-spacing:-0.5px; color:#ffffff;">AccountiX</div>
+            <div style="font-size:12px; color:#94a3b8; font-weight:600;">Agency Business OS & Multi-Tenant Platform</div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" style="color:#e2e8f0; border-color:rgba(255,255,255,0.18);">
+            ${isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
+          <button class="btn btn-sm" onclick="signInWithGoogle()" style="background:#ffffff; color:#0f172a; font-weight:700; border:none; padding:8px 14px; border-radius:8px; display:flex; align-items:center; gap:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+            <svg width="16" height="16" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+
+      <!-- Hero Header -->
+      <div style="text-align:center; max-width:720px; margin-bottom:40px;">
+        <div class="pill pill-purple" style="font-size:11.5px; font-weight:700; margin-bottom:12px; display:inline-block; letter-spacing:0.5px; text-transform:uppercase;">
+          🔐 Unified Executive Authentication
+        </div>
+        <h1 style="font-size:38px; font-weight:800; font-family:'Space Grotesk', sans-serif; color:#ffffff; margin:0 0 12px 0; line-height:1.2; letter-spacing:-0.5px;">
+          Choose Your Portal Identity
+        </h1>
+        <p style="font-size:15px; color:#94a3b8; line-height:1.6; margin:0;">
+          Select your authorized workspace below to access dedicated analytics, agency operations, or employee production pipelines.
+        </p>
+      </div>
+
+      <!-- 3 Identity Cards Grid -->
+      <div style="width:100%; max-width:1180px; display:grid; grid-template-columns:repeat(auto-fit, minmax(330px, 1fr)); gap:24px; margin-bottom:36px;">
+        
+        <!-- CARD 1: PLATFORM SUPER ADMIN -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(168,85,247,0.35); border-radius:20px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; backdrop-filter:blur(16px); box-shadow:0 12px 36px rgba(0,0,0,0.35);">
+          <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #9333ea, #c084fc);"></div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+              <div style="width:54px; height:54px; border-radius:14px; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; font-size:28px;">👑</div>
+              <span class="pill pill-purple">Option 1 · SaaS Hub</span>
+            </div>
+            <h2 style="font-size:21px; font-weight:800; color:#fff; margin:0 0 6px 0;">Platform Super Admin</h2>
+            <div style="font-size:12.5px; color:#c084fc; font-weight:600; margin-bottom:14px;">admin@accountix.agency</div>
+            <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin:0 0 16px 0;">
+              Global agency tenants directory, platform MRR analytics, idle account detection, and automated customer retention mailers.
+            </p>
+            <ul style="font-size:12.5px; color:#94a3b8; line-height:1.9; padding-left:18px; margin:0 0 22px 0;">
+              <li>Global Agency Directory & Tenants</li>
+              <li>Real-Time MRR & Subscription Analytics</li>
+              <li>Inactive Customer Detector (>7d Idle)</li>
+              <li>1-Click Re-Engagement Mailer</li>
+            </ul>
+          </div>
+          <button class="btn btn-primary" onclick="loginGateway('admin', 'usr_admin')" style="width:100%; justify-content:center; padding:12px; font-weight:800; background:#9333ea; border-color:#a855f7; font-size:14px;">
+            Enter Platform Admin Hub ➔
+          </button>
+        </div>
+
+        <!-- CARD 2: AGENCY MANAGING DIRECTOR -->
+        <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(59,130,246,0.6); border-radius:20px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; backdrop-filter:blur(16px); box-shadow:0 14px 40px rgba(59,130,246,0.2);">
+          <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+              <div style="width:54px; height:54px; border-radius:14px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); display:flex; align-items:center; justify-content:center; font-size:28px;">🏢</div>
+              <span class="pill pill-blue">Option 2 · Agency OS</span>
+            </div>
+            <h2 style="font-size:21px; font-weight:800; color:#fff; margin:0 0 6px 0;">Managing Director (Owner)</h2>
+            <div style="font-size:12.5px; color:#60a5fa; font-weight:600; margin-bottom:14px;">Agency Founder & Operations Director</div>
+            <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin:0 0 16px 0;">
+              Full agency operations, multi-package client retainers, realized cash P&L engine, team payroll, and employee portal provisioning.
+            </p>
+            <ul style="font-size:12.5px; color:#94a3b8; line-height:1.9; padding-left:18px; margin:0 0 18px 0;">
+              <li>Multi-Package Retainer Contracts & Invoicing</li>
+              <li>Realized Net Cash Profit & Outflow Ledgers</li>
+              <li><b>💳 Purchase / Upgrade Subscription Plans</b></li>
+              <li><b>👥 Provision Staff for Employee Portal Access</b></li>
+            </ul>
+          </div>
+          <div>
+            <button class="btn btn-primary" onclick="loginGateway('manager', 'usr_manager')" style="width:100%; justify-content:center; padding:12px; font-weight:800; background:#2563eb; border-color:#3b82f6; margin-bottom:8px; font-size:14px;">
+              Enter Managing Director Portal ➔
+            </button>
+            <button class="btn btn-ghost" onclick="openNewAgencySignupModal()" style="width:100%; justify-content:center; font-size:12.5px; color:#94a3b8;">
+              ✨ Start 14-Day Free Agency Trial
+            </button>
+          </div>
+        </div>
+
+        <!-- CARD 3: AGENCY EMPLOYEE / SPECIALIST -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(16,185,129,0.38); border-radius:20px; padding:30px 26px; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; backdrop-filter:blur(16px); box-shadow:0 12px 36px rgba(0,0,0,0.35);">
+          <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #10b981, #34d399);"></div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
+              <div style="width:54px; height:54px; border-radius:14px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); display:flex; align-items:center; justify-content:center; font-size:28px;">👥</div>
+              <span class="pill pill-green">Option 3 · Staff Portal</span>
+            </div>
+            <h2 style="font-size:21px; font-weight:800; color:#fff; margin:0 0 6px 0;">Agency Employee & Creator</h2>
+            <div style="font-size:12.5px; color:#34d399; font-weight:600; margin-bottom:14px;">Video Editor · Shooter · Specialist · Developer</div>
+            <p style="font-size:13px; color:#cbd5e1; line-height:1.6; margin:0 0 14px 0;">
+              Daily punch clock, 31-day attendance matrix, assigned video shoots & reels with Google Drive submit, tasks & personal salary slips.
+            </p>
+
+            <!-- Dynamic Staff Selector -->
+            <div class="field" style="margin-bottom:18px;">
+              <label style="color:#e2e8f0; font-size:12px; font-weight:700;">Select Your Employee Account</label>
+              <select id="empGatewayStaffSelect" style="background:#1e293b; color:#ffffff; border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:10px 12px; font-size:13px; width:100%; font-weight:600;">
+                ${staffList.length ? staffList.map(s => `<option value="${s.id}">${esc(s.name)} — ${esc(s.role || 'Staff')}</option>`).join('') : `<option value="">No employees added yet by MD</option>`}
+              </select>
+              <div style="font-size:11px; color:#94a3b8; margin-top:5px;">
+                ${staffList.length ? '✓ Auto-synced with Managing Director team roster' : '⚠️ Ask your Managing Director to add you in Team & Payroll'}
+              </div>
+            </div>
+          </div>
+          
+          <button class="btn btn-signal" id="empGatewayEnterBtn" style="width:100%; justify-content:center; padding:12px; font-weight:800; font-size:14px;">
+            🕒 Clock In & Enter Workspace ➔
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Gateway Footer Info -->
+      <div style="text-align:center; color:#64748b; font-size:12px; max-width:650px; line-height:1.6;">
+        Multi-Tenant Architecture · Real-Time Supabase PostgreSQL Sync · AccountiX v2.4 Enterprise Edition
+      </div>
+    </div>
+  `;
+}
+
+function attachLandingGateway() {
+  const empBtn = document.getElementById('empGatewayEnterBtn');
+  if (empBtn) {
+    empBtn.onclick = () => {
+      const sel = document.getElementById('empGatewayStaffSelect');
+      const staffId = sel ? sel.value : null;
+      if (!staffId) {
+        toast('No staff member selected. Managing Director must first add employees.');
+        return;
+      }
+      loginGateway('employee', staffId);
+    };
+  }
+}
+
+function loginGateway(role, targetId) {
+  STATE.isAuthenticated = true;
+  if (role === 'admin') {
+    const adminProf = DEMO_PROFILES.find(p => p.role === 'admin') || DEMO_PROFILES[0];
+    STATE.currentUser = { ...adminProf };
+    STATE.view = 'admin_overview';
+  } else if (role === 'manager') {
+    const mgrProf = DEMO_PROFILES.find(p => p.role === 'manager') || DEMO_PROFILES[1];
+    STATE.currentUser = { ...mgrProf };
+    STATE.view = 'dashboard';
+  } else if (role === 'employee') {
+    const staffRec = (STATE.staff || []).find(s => s.id === targetId) || STATE.staff[0] || { id: 'st_2', name: 'Rohan Mehta', role: 'Lead Video Editor', baseSalary: 32000 };
+    
+    let prof = DEMO_PROFILES.find(p => p.staffId === staffRec.id || p.name === staffRec.name);
+    if (!prof) {
+      prof = {
+        id: `usr_emp_${staffRec.id}`,
+        name: staffRec.name,
+        email: `${staffRec.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@accountix.agency`,
+        role: 'employee',
+        staffId: staffRec.id,
+        companyId: 'comp_1',
+        companyName: STATE.settings.agencyName || 'AccountiX Media HQ',
+        title: staffRec.role || 'Creator & Specialist',
+        avatar: staffRec.role && (staffRec.role.includes('Shoot') || staffRec.role.includes('Camera')) ? '📹' : '🎬'
+      };
+      DEMO_PROFILES.push(prof);
+    }
+    STATE.currentUser = { ...prof };
+    STATE.view = 'emp_workspace';
+  }
+  saveState();
+  render();
+  toast(`Logged in as ${STATE.currentUser.title || STATE.currentUser.name} (${STATE.currentUser.role.toUpperCase()})`);
+}
+window.loginGateway = loginGateway;
+
+function logoutGateway() {
+  STATE.isAuthenticated = false;
+  saveState();
+  render();
+  toast('Signed out to Authentication Gateway');
+}
+window.logoutGateway = logoutGateway;
+
+/* ---------- MANAGING DIRECTOR PLAN UPGRADE & SUBSCRIPTION MODAL ---------- */
+function openAgencyPlanModal() {
+  const currPlan = (STATE.currentUser && STATE.currentUser.plan) || 'Enterprise Suite';
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">💳 Upgrade / Purchase Agency Plan</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Activate unlimited clients, team members, and Supabase cloud sync</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:20px;">
+      <!-- Starter Trial -->
+      <div class="card" style="border:1px solid ${currPlan === 'Starter Trial' ? 'var(--brand)' : 'var(--border-card)'};">
+        <div class="pill pill-gray" style="margin-bottom:8px;">Starter Trial</div>
+        <div style="font-size:22px; font-weight:800; font-family:'JetBrains Mono'; margin-bottom:4px;">₹0 <span style="font-size:12px; color:var(--text-muted);">/ 14 days</span></div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">For solo freelancers and testing.</div>
+        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
+          <li>Up to 5 Clients</li>
+          <li>Up to 2 Team Members</li>
+          <li>Local Storage Mode</li>
+        </ul>
+        <button class="btn ${currPlan === 'Starter Trial' ? 'btn-ghost' : 'btn-primary'} btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('Starter Trial', 0)">
+          ${currPlan === 'Starter Trial' ? 'Current Plan' : 'Select Trial'}
+        </button>
+      </div>
+
+      <!-- Pro Agency -->
+      <div class="card" style="border:1px solid ${currPlan === 'Pro Agency' ? 'var(--signal-cash)' : 'var(--border-card)'}; box-shadow:0 0 15px rgba(16,185,129,0.15);">
+        <div class="pill pill-green" style="margin-bottom:8px;">Pro Agency</div>
+        <div style="font-size:22px; font-weight:800; font-family:'JetBrains Mono'; color:var(--signal-cash); margin-bottom:4px;">₹7,999 <span style="font-size:12px; color:var(--text-muted);">/ mo</span></div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Growth tier for scaling agencies.</div>
+        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
+          <li>Unlimited Clients & Retainers</li>
+          <li>Up to 10 Team Members</li>
+          <li>Supabase Cloud Database</li>
+        </ul>
+        <button class="btn btn-signal btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('Pro Agency', 7999)">
+          ${currPlan === 'Pro Agency' ? 'Active Plan' : 'Upgrade to Pro'}
+        </button>
+      </div>
+
+      <!-- Enterprise Suite -->
+      <div class="card" style="border:1px solid ${currPlan === 'Enterprise Suite' ? 'var(--brand)' : 'var(--border-card)'}; box-shadow:0 0 15px var(--brand-glow);">
+        <div class="pill pill-purple" style="margin-bottom:8px;">Enterprise Suite</div>
+        <div style="font-size:22px; font-weight:800; font-family:'JetBrains Mono'; color:var(--brand); margin-bottom:4px;">₹14,999 <span style="font-size:12px; color:var(--text-muted);">/ mo</span></div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Full multi-tenant agency power.</div>
+        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
+          <li>Unlimited Clients & Staff</li>
+          <li>Dedicated Employee Portals</li>
+          <li>Realized Cash Engine & Audit</li>
+        </ul>
+        <button class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('Enterprise Suite', 14999)">
+          ${currPlan === 'Enterprise Suite' ? 'Active Plan' : 'Upgrade Enterprise'}
+        </button>
+      </div>
+    </div>
+  `, 640);
+}
+window.openAgencyPlanModal = openAgencyPlanModal;
+
+function selectAgencyPlan(planName, price) {
+  if (STATE.currentUser) {
+    STATE.currentUser.plan = planName;
+  }
+  const myComp = (STATE.companies || []).find(c => c.id === (STATE.currentUser ? STATE.currentUser.companyId : 'comp_1')) || STATE.companies[0];
+  if (myComp) {
+    myComp.plan = planName;
+    myComp.mrr = price;
+    myComp.status = 'Active';
+  }
+  saveState();
+  closeModal();
+  toast(`🎉 Congratulations! You have successfully activated the ${planName} plan! You can now add unlimited team members and manage their employee portals.`);
+  render();
+}
+window.selectAgencyPlan = selectAgencyPlan;
+
+/* ---------- NEW AGENCY 14-DAY TRIAL SIGNUP MODAL ---------- */
+function openNewAgencySignupModal() {
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🚀 Start 14-Day Free Agency Trial</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Launch your isolated agency workspace in seconds</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field" style="margin-bottom:12px;">
+      <label>Agency / Company Name *</label>
+      <input id="f_sg_agency" placeholder="e.g. Maverick Growth Media" required />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Managing Director Name *</label>
+        <input id="f_sg_owner" placeholder="e.g. Jeet Rakholiya" required />
+      </div>
+      <div class="field">
+        <label>Work Email *</label>
+        <input id="f_sg_email" type="email" placeholder="founder@agency.com" required />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Phone / WhatsApp</label>
+        <input id="f_sg_phone" placeholder="+91 98765 43210" />
+      </div>
+      <div class="field">
+        <label>Starting Plan Tier</label>
+        <select id="f_sg_plan">
+          <option value="Starter Trial">14-Day Free Trial (₹0)</option>
+          <option value="Pro Agency">Pro Agency (₹7,999/mo)</option>
+          <option value="Enterprise Suite">Enterprise Suite (₹14,999/mo)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="startTrialSubmitBtn">🚀 Launch Agency Workspace</button>
+    </div>
+  `, 540);
+
+  document.getElementById('startTrialSubmitBtn').onclick = () => {
+    const agencyName = document.getElementById('f_sg_agency').value.trim();
+    const ownerName = document.getElementById('f_sg_owner').value.trim();
+    const email = document.getElementById('f_sg_email').value.trim();
+    const phone = document.getElementById('f_sg_phone').value.trim();
+    const plan = document.getElementById('f_sg_plan').value;
+
+    if (!agencyName || !ownerName || !email) {
+      toast('Please enter Agency Name, Founder Name, and Email');
+      return;
+    }
+
+    const newCompId = `comp_${Date.now()}`;
+    const newComp = {
+      id: newCompId,
+      name: agencyName,
+      ownerEmail: email,
+      plan: plan,
+      status: 'Active',
+      createdAt: todayStr(),
+      usersCount: 1,
+      mrr: plan === 'Enterprise Suite' ? 14999 : plan === 'Pro Agency' ? 7999 : 0
+    };
+    STATE.companies.push(newComp);
+
+    STATE.settings.agencyName = agencyName;
+    STATE.settings.ownerName = ownerName;
+    STATE.settings.email = email;
+    if (phone) STATE.settings.phone = phone;
+
+    const newMgr = {
+      id: `usr_${Date.now()}`,
+      name: ownerName,
+      email: email,
+      role: 'manager',
+      companyId: newCompId,
+      companyName: agencyName,
+      title: 'Managing Director & Founder',
+      avatar: '🏢',
+      lastActiveAt: new Date().toISOString(),
+      status: 'Active',
+      purchasedDate: todayStr(),
+      plan: plan
+    };
+    STATE.allUsers.push(newMgr);
+    DEMO_PROFILES.push(newMgr);
+
+    STATE.currentUser = { ...newMgr };
+    STATE.isAuthenticated = true;
+    STATE.view = 'dashboard';
+
+    saveState();
+    closeModal();
+    toast(`🎉 Welcome to AccountiX, ${ownerName}! Workspace for "${agencyName}" is live.`);
+    render();
+  };
+}
+window.openNewAgencySignupModal = openNewAgencySignupModal;
+
 function toggleTheme() {
   const current = STATE.settings.theme || 'dark';
   const next = current === 'dark' ? 'light' : 'dark';
@@ -1183,6 +1599,7 @@ function toggleTheme() {
 function switchRole(profileId) {
   const prof = DEMO_PROFILES.find(p => p.id === profileId) || DEMO_PROFILES[1];
   STATE.currentUser = { ...prof };
+  STATE.isAuthenticated = true;
   if (prof.role === 'admin') {
     STATE.view = 'admin_overview';
   } else if (prof.role === 'employee') {
@@ -1210,6 +1627,7 @@ async function signInWithGoogle() {
       alert('Google Auth Notice: ' + e.message);
     }
   } else {
+    STATE.isAuthenticated = true;
     toast('Google Authentication verified! Signed in as Agency Managing Director.');
     switchRole('usr_manager');
   }
@@ -1236,7 +1654,9 @@ function openAuthModal() {
           <div style="font-size:12px; color:var(--text-secondary);">${esc(curr.email)} · <span class="pill ${curr.role === 'admin' ? 'pill-purple' : curr.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:10px; text-transform:uppercase;">${curr.role}</span></div>
         </div>
       </div>
-      <span class="pill pill-green">Active Session</span>
+      <button class="btn btn-ghost btn-sm" onclick="logoutGateway(); closeModal();" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">
+        🚪 Sign Out
+      </button>
     </div>
 
     <!-- Google OAuth Direct Sign-In Button -->
@@ -3361,31 +3781,87 @@ function attachTeam() {
 function openStaffModal(staffId = null) {
   const s = staffId ? STATE.staff.find(st => st.id === staffId) : {};
   showModal(`
-    <div class="modal-header"><h3 class="modal-title">${staffId ? 'Edit Team Member' : 'Add Team Member'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-header"><h3 class="modal-title">${staffId ? 'Edit Team Member' : 'Add Team Member (Provision Portal Access)'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Full Name *</label><input id="f_st_nm" value="${esc(s.name || '')}" placeholder="e.g. Rohan Mehta" required autofocus /></div>
     <div class="field-row">
-      <div class="field"><label>Role</label><select id="f_st_rl">${STAFF_ROLES.map(r => `<option ${r === s.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-      <div class="field"><label>Phone</label><input id="f_st_ph" value="${esc(s.phone || '')}" /></div>
+      <div class="field"><label>Role / Position</label><select id="f_st_rl">${STAFF_ROLES.map(r => `<option ${r === s.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
+      <div class="field"><label>Phone / Login ID</label><input id="f_st_ph" value="${esc(s.phone || '')}" placeholder="+91 98765 43210" /></div>
     </div>
     <div class="field"><label>Monthly Base Salary (₹)</label><input type="number" id="f_st_sal" value="${s.baseSalary || 25000}" /></div>
+    
+    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12px; color:var(--text-secondary);">
+      <b style="color:var(--signal-cash);">✓ Employee Portal Activation:</b> Saving will automatically enable this employee's personal login account for the Employee Attendance, Shoot Submission & Task Portal.
+    </div>
+
     <div class="modal-actions">
       ${staffId ? `<button class="btn btn-danger-ghost" id="delStBtn" style="margin-right:auto;">Delete</button>` : ''}
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="saveStBtn">Save Staff</button>
+      <button class="btn btn-primary" id="saveStBtn">Save & Provision Staff</button>
     </div>
-  `, 500);
+  `, 520);
+
   document.getElementById('saveStBtn').onclick = () => {
     const nm = document.getElementById('f_st_nm').value.trim();
     if (!nm) { toast('Name required'); return; }
+    const role = document.getElementById('f_st_rl').value;
+    const phone = document.getElementById('f_st_ph').value.trim();
+    const baseSalary = Number(document.getElementById('f_st_sal').value) || 0;
+
+    let targetStaffId;
     if (staffId) {
-      Object.assign(s, { name: nm, role: document.getElementById('f_st_rl').value, phone: document.getElementById('f_st_ph').value.trim(), baseSalary: Number(document.getElementById('f_st_sal').value) || 0 });
+      targetStaffId = staffId;
+      Object.assign(s, { name: nm, role, phone, baseSalary });
     } else {
-      STATE.staff.push({ id: uid('st'), name: nm, role: document.getElementById('f_st_rl').value, phone: document.getElementById('f_st_ph').value.trim(), baseSalary: Number(document.getElementById('f_st_sal').value) || 0, status: 'Active' });
+      targetStaffId = uid('st');
+      STATE.staff.push({ id: targetStaffId, name: nm, role, phone, baseSalary, status: 'Active' });
     }
-    saveState(); closeModal(); toast('Staff saved'); render();
+
+    // Auto-provision or update user account for Employee Portal login
+    let existingUser = (STATE.allUsers || []).find(u => u.staffId === targetStaffId || (u.name === nm && u.role === 'employee'));
+    if (!existingUser) {
+      const emailUsername = nm.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const empUser = {
+        id: `usr_emp_${targetStaffId}`,
+        name: nm,
+        email: `${emailUsername}@accountix.agency`,
+        role: 'employee',
+        staffId: targetStaffId,
+        companyId: STATE.currentUser ? (STATE.currentUser.companyId || 'comp_1') : 'comp_1',
+        companyName: STATE.settings.agencyName || 'AccountiX Media HQ',
+        title: role,
+        avatar: role.includes('Video') || role.includes('Editor') ? '🎬' : role.includes('Shoot') || role.includes('Camera') ? '📹' : '👥',
+        lastActiveAt: new Date().toISOString(),
+        status: 'Active',
+        purchasedDate: todayStr(),
+        plan: 'Enterprise Suite'
+      };
+      if (!STATE.allUsers) STATE.allUsers = [];
+      STATE.allUsers.push(empUser);
+      if (!DEMO_PROFILES.find(p => p.id === empUser.id)) {
+        DEMO_PROFILES.push(empUser);
+      }
+    } else {
+      existingUser.name = nm;
+      existingUser.title = role;
+    }
+
+    saveState();
+    closeModal();
+    toast(`Staff member "${nm}" saved & enabled for Employee Portal login! 🎉`);
+    render();
   };
+
   const dBtn = document.getElementById('delStBtn');
-  if (dBtn) dBtn.onclick = () => { STATE.staff = STATE.staff.filter(i => i.id !== staffId); saveState(); closeModal(); toast('Staff removed'); render(); };
+  if (dBtn) {
+    dBtn.onclick = () => {
+      STATE.staff = STATE.staff.filter(i => i.id !== staffId);
+      STATE.allUsers = (STATE.allUsers || []).filter(u => u.staffId !== staffId);
+      saveState();
+      closeModal();
+      toast('Staff removed');
+      render();
+    };
+  }
 }
 function openPaySalaryModal(staffId) {
   const s = STATE.staff.find(st => st.id === staffId);
