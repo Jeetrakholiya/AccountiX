@@ -346,6 +346,40 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
   color: var(--accent-rose);
 }
 
+/* Floating Action Button (FAB) */
+.fab {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 20px !important;
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  background: var(--brand) !important;
+  color: #ffffff !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 24px var(--brand-glow), 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer;
+  z-index: 9999 !important;
+  border: none !important;
+  transition: transform 0.12s ease !important;
+  font-size: 22px !important;
+  flex: none !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+.fab:active {
+  transform: scale(0.92) !important;
+}
+
 /* Buttons */
 .btn {
   border: none; border-radius: 9px; padding: 8px 15px; font-weight: 600; font-size: 13px;
@@ -1422,7 +1456,7 @@ function render() {
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
-            <span style="font-size:12px;">Back</span>
+            <span class="btn-text" style="font-size:12px;">Back</span>
           </button>
 
           <!-- Search Bar -->
