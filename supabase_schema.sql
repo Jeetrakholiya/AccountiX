@@ -188,6 +188,21 @@ CREATE TABLE IF NOT EXISTS accountix_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 15. User Login & Access Security Audit Trail Table
+CREATE TABLE IF NOT EXISTS accountix_login_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    user_name TEXT,
+    user_email TEXT,
+    role TEXT,
+    company_name TEXT,
+    login_time TEXT,
+    auth_method TEXT,
+    status TEXT DEFAULT 'Success (Verified)',
+    device TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==============================================================================
 -- Row Level Security (RLS) & Open Access Policies
 -- ==============================================================================
@@ -205,6 +220,7 @@ ALTER TABLE accountix_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_service_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accountix_login_logs ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if re-running
 DROP POLICY IF EXISTS "Allow all companies" ON accountix_companies;
@@ -221,6 +237,7 @@ DROP POLICY IF EXISTS "Allow all content" ON accountix_content;
 DROP POLICY IF EXISTS "Allow all leads" ON accountix_leads;
 DROP POLICY IF EXISTS "Allow all service catalog" ON accountix_service_catalog;
 DROP POLICY IF EXISTS "Allow all settings" ON accountix_settings;
+DROP POLICY IF EXISTS "Allow all login logs" ON accountix_login_logs;
 
 CREATE POLICY "Allow all companies" ON accountix_companies FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all users" ON accountix_users FOR ALL USING (true) WITH CHECK (true);
@@ -236,6 +253,7 @@ CREATE POLICY "Allow all content" ON accountix_content FOR ALL USING (true) WITH
 CREATE POLICY "Allow all leads" ON accountix_leads FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all service catalog" ON accountix_service_catalog FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all settings" ON accountix_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all login logs" ON accountix_login_logs FOR ALL USING (true) WITH CHECK (true);
 
 -- Performance Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON accountix_users(email);
@@ -244,3 +262,4 @@ CREATE INDEX IF NOT EXISTS idx_clients_company ON accountix_clients(company_id);
 CREATE INDEX IF NOT EXISTS idx_packages_client ON accountix_packages(client_id);
 CREATE INDEX IF NOT EXISTS idx_payments_client ON accountix_payments(client_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_staff ON accountix_attendance(staff_id, date);
+CREATE INDEX IF NOT EXISTS idx_login_logs_user ON accountix_login_logs(user_email);
