@@ -3,22 +3,22 @@
     {
       "id": "comp_1",
       "name": "AccountiX Media HQ",
-      "plan": "Enterprise Suite",
+      "plan": "1 Year Plan",
       "status": "Active",
       "ownerEmail": "jeet@accountix.agency",
       "createdAt": "2026-01-15",
       "usersCount": 8,
-      "mrr": 14999
+      "mrr": 999
     },
     {
       "id": "comp_2",
       "name": "UrbanFit Digital Agency",
-      "plan": "Pro Agency",
+      "plan": "6 Months Plan",
       "status": "Active",
       "ownerEmail": "dr.nikhil@urbanfit.io",
       "createdAt": "2026-02-01",
       "usersCount": 5,
-      "mrr": 7999
+      "mrr": 589
     },
     {
       "id": "comp_3",
@@ -33,38 +33,37 @@
     {
       "id": "comp_4",
       "name": "Starlight Performance Labs",
-      "plan": "Pro Agency",
+      "plan": "1 Month Plan",
       "status": "Active",
       "ownerEmail": "simran@starlightlabs.co",
       "createdAt": "2026-02-14",
       "usersCount": 6,
-      "mrr": 7999
+      "mrr": 119
     },
     {
       "id": "comp_5",
       "name": "BrandScale India",
-      "plan": "Pro Agency",
+      "plan": "6 Months Plan",
       "status": "Inactive",
       "ownerEmail": "vikas@brandscale.in",
       "createdAt": "2026-02-05",
       "usersCount": 3,
-      "mrr": 7999
+      "mrr": 589
     }
   ],
   "allUsers": [
     {
       "id": "usr_admin",
-      "name": "Platform Administrator",
+      "name": "Platform Admin",
       "email": "admin@accountix.agency",
       "password": "admin@123",
       "role": "admin",
       "companyId": "comp_1",
-      "companyName": "AccountiX Platform HQ",
-      "title": "Platform Super Admin",
-      "avatar": "👑",
+      "companyName": "AccountiX Platform",
+      "lastActiveAt": "2026-08-26T09:27:53.005Z",
       "status": "Active",
       "purchasedDate": "2026-01-01",
-      "plan": "Enterprise Suite"
+      "plan": "1 Year Plan"
     },
     {
       "id": "usr_manager",
@@ -74,12 +73,10 @@
       "role": "manager",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "title": "Agency Managing Director",
-      "avatar": "🏢",
+      "lastActiveAt": "2026-08-26T09:27:26.445Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
-      "plan": "Enterprise Suite",
-      "lastActiveAt": "2026-08-26T09:24:15.883Z"
+      "plan": "1 Year Plan"
     },
     {
       "id": "usr_rohan",
@@ -90,8 +87,7 @@
       "staffId": "st_2",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "title": "Lead Video Editor",
-      "avatar": "🎬",
+      "lastActiveAt": "2026-08-26T09:27:26.445Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
       "plan": "Enterprise Suite"
@@ -105,8 +101,7 @@
       "staffId": "st_1",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "title": "Cinematographer & Shooter",
-      "avatar": "📹",
+      "lastActiveAt": "2026-08-26T09:27:26.445Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
       "plan": "Enterprise Suite"
@@ -119,8 +114,7 @@
       "role": "manager",
       "companyId": "comp_2",
       "companyName": "UrbanFit Digital Agency",
-      "title": "Managing Director",
-      "avatar": "🏢",
+      "lastActiveAt": "2026-08-25T09:27:26.445Z",
       "status": "Active",
       "purchasedDate": "2026-02-01",
       "plan": "Pro Agency"
@@ -133,8 +127,7 @@
       "role": "manager",
       "companyId": "comp_3",
       "companyName": "Apex Growth Creatives",
-      "title": "Founder",
-      "avatar": "🏢",
+      "lastActiveAt": "2026-08-15T09:27:26.445Z",
       "status": "Idle (11d Inactive)",
       "purchasedDate": "2026-02-10",
       "plan": "Starter Trial"
@@ -147,8 +140,7 @@
       "role": "manager",
       "companyId": "comp_5",
       "companyName": "BrandScale India",
-      "title": "Director",
-      "avatar": "🏢",
+      "lastActiveAt": "2026-08-07T09:27:26.445Z",
       "status": "Purchased but Never Used",
       "purchasedDate": "2026-02-05",
       "plan": "Pro Agency"
@@ -161,50 +153,22 @@
       "role": "manager",
       "companyId": "comp_4",
       "companyName": "Starlight Performance Labs",
-      "title": "Managing Director",
-      "avatar": "🏢",
+      "lastActiveAt": "2026-08-11T09:27:26.445Z",
       "status": "At Risk (15d Inactive)",
       "purchasedDate": "2026-02-14",
-      "plan": "Pro Agency"
-    },
-    {
-      "id": "usr_1787736255907",
-      "name": "Fullstack Test User",
-      "email": "test@agency.com",
-      "password": "password123",
-      "role": "manager",
-      "companyId": "comp_1787736255907",
-      "companyName": "Fullstack Test User's Agency",
-      "title": "Managing Director",
-      "avatar": "🏢",
-      "lastActiveAt": "2026-08-26T09:24:15.907Z",
-      "status": "Active",
-      "purchasedDate": "2026-08-26",
       "plan": "Pro Agency"
     }
   ],
   "loginLogs": [
     {
-      "id": "log_1787736255907_i8pn",
-      "userId": "usr_1787736255907",
-      "userName": "Fullstack Test User",
-      "userEmail": "test@agency.com",
-      "role": "manager",
-      "companyName": "Fullstack Test User's Agency",
-      "loginTime": "26 Aug 2026, 02:54:15 pm",
-      "authMethod": "Email + 2-Time Password Verified (Registration)",
-      "status": "Success (Verified)",
-      "device": "Desktop Workstation"
-    },
-    {
-      "id": "log_1787736255898_rgv5",
-      "userId": "usr_manager",
-      "userName": "Jeet Rakholiya",
-      "userEmail": "jeet@accountix.agency",
-      "role": "manager",
-      "companyName": "AccountiX Media HQ",
-      "loginTime": "26 Aug 2026, 02:54:15 pm",
-      "authMethod": "Email & Password (Backend Verified)",
+      "id": "log_1787736473021_46yv",
+      "userId": "usr_admin",
+      "userName": "Platform Admin",
+      "userEmail": "admin@accountix.agency",
+      "role": "admin",
+      "companyName": "AccountiX Platform",
+      "loginTime": "26 Aug 2026, 02:57:53 pm",
+      "authMethod": "Email & Password (Verified)",
       "status": "Success (Verified)",
       "device": "Desktop Workstation"
     },
@@ -245,16 +209,177 @@
       "device": "Mobile Device"
     }
   ],
-  "clients": [],
-  "packages": [],
-  "payments": [],
-  "expenses": [],
+  "clients": [
+    {
+      "id": "cl_1",
+      "name": "Apex Dental Care",
+      "company": "Dr. Nikhil Parekh Clinic",
+      "mobile": "9898011223",
+      "whatsapp": "9898011223",
+      "instagram": "@apexdentalcare",
+      "status": "Active",
+      "createdAt": "2026-08-01T10:00:00Z"
+    },
+    {
+      "id": "cl_2",
+      "name": "UrbanFit Gym & Crossfit",
+      "company": "UrbanFit Sports Pvt Ltd",
+      "mobile": "9898022334",
+      "whatsapp": "9898022334",
+      "instagram": "@urbanfitgym",
+      "status": "Active",
+      "createdAt": "2026-08-02T11:00:00Z"
+    },
+    {
+      "id": "cl_3",
+      "name": "Royal Rajputana Jewellers",
+      "company": "Royal Jewellers & Sons",
+      "mobile": "9898033445",
+      "whatsapp": "9898033445",
+      "instagram": "@royalrajputana",
+      "status": "Active",
+      "createdAt": "2026-08-03T12:00:00Z"
+    },
+    {
+      "id": "cl_4",
+      "name": "The Craft Coffee Roastery",
+      "company": "Craft Bean Hospitality",
+      "mobile": "9898044556",
+      "whatsapp": "9898044556",
+      "instagram": "@thecraftcoffee",
+      "status": "Active",
+      "createdAt": "2026-08-04T14:00:00Z"
+    }
+  ],
+  "packages": [
+    {
+      "id": "pkg_1",
+      "clientId": "cl_1",
+      "serviceType": "Social Media Management (Reels + Posts)",
+      "amount": 45000,
+      "startDate": "2026-08-01",
+      "endDate": "2026-08-28",
+      "assignedStaffId": "st_5",
+      "status": "Active"
+    },
+    {
+      "id": "pkg_2",
+      "clientId": "cl_2",
+      "serviceType": "Meta & Instagram Ads Management",
+      "amount": 35000,
+      "startDate": "2026-08-05",
+      "endDate": "2026-08-30",
+      "assignedStaffId": "st_3",
+      "status": "Active"
+    },
+    {
+      "id": "pkg_3",
+      "clientId": "cl_3",
+      "serviceType": "Complete Brand Marketing (SMMA)",
+      "amount": 80000,
+      "startDate": "2026-08-01",
+      "endDate": "2026-08-30",
+      "assignedStaffId": "st_1",
+      "status": "Active"
+    },
+    {
+      "id": "pkg_4",
+      "clientId": "cl_4",
+      "serviceType": "Website Design & Development",
+      "amount": 55000,
+      "startDate": "2026-08-10",
+      "endDate": "2026-08-25",
+      "assignedStaffId": "st_4",
+      "status": "Active"
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay_1",
+      "clientId": "cl_1",
+      "packageId": "pkg_1",
+      "amount": 45000,
+      "date": "2026-08-02",
+      "mode": "UPI (GPay / PhonePe / Paytm)",
+      "note": "Advance full payment"
+    },
+    {
+      "id": "pay_2",
+      "clientId": "cl_2",
+      "packageId": "pkg_2",
+      "amount": 20000,
+      "date": "2026-08-06",
+      "mode": "Bank Transfer (NEFT/IMPS/RTGS)",
+      "note": "Part payment"
+    },
+    {
+      "id": "pay_3",
+      "clientId": "cl_3",
+      "packageId": "pkg_3",
+      "amount": 50000,
+      "date": "2026-08-04",
+      "mode": "UPI (GPay / PhonePe / Paytm)",
+      "note": "First installment"
+    },
+    {
+      "id": "pay_4",
+      "clientId": "cl_4",
+      "packageId": "pkg_4",
+      "amount": 30000,
+      "date": "2026-08-11",
+      "mode": "Bank Transfer (NEFT/IMPS/RTGS)",
+      "note": "50% project milestone"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "exp_1",
+      "category": "Office Rent",
+      "amount": 22000,
+      "date": "2026-08-02",
+      "mode": "Bank Transfer (NEFT/IMPS/RTGS)",
+      "note": "Studio 304 Rent"
+    },
+    {
+      "id": "exp_2",
+      "category": "Electricity & Utilities",
+      "amount": 4800,
+      "date": "2026-08-07",
+      "mode": "UPI (GPay / PhonePe / Paytm)",
+      "note": "Office Power & AC"
+    },
+    {
+      "id": "exp_3",
+      "category": "Software & SaaS Tools",
+      "amount": 8500,
+      "date": "2026-08-05",
+      "mode": "Credit Card / Debit Card",
+      "note": "Adobe CC, Canva, Notion, Midjourney"
+    },
+    {
+      "id": "exp_4",
+      "category": "Shooting Equipment & Gear",
+      "amount": 3200,
+      "date": "2026-08-12",
+      "mode": "UPI (GPay / PhonePe / Paytm)",
+      "note": "Wireless Lapel Mic Batteries & Diffuser"
+    },
+    {
+      "id": "exp_5",
+      "category": "Salary",
+      "amount": 32000,
+      "date": "2026-08-05",
+      "mode": "Bank Transfer (NEFT/IMPS/RTGS)",
+      "note": "Salary — Rohan Mehta",
+      "staffId": "st_2"
+    }
+  ],
   "staff": [
     {
       "id": "st_1",
       "name": "Aarav Sharma",
       "role": "Video Shooter / Cinematographer",
-      "phone": "+91 98234 11223",
+      "phone": "9820011223",
       "baseSalary": 28000,
       "status": "Active"
     },
@@ -262,30 +387,280 @@
       "id": "st_2",
       "name": "Rohan Mehta",
       "role": "Video Editor",
-      "phone": "+91 98765 22334",
+      "phone": "9820022334",
       "baseSalary": 32000,
       "status": "Active"
     },
     {
       "id": "st_3",
-      "name": "Pooja Verma",
+      "name": "Pooja Patel",
+      "role": "Meta Ads Specialist",
+      "phone": "9820033445",
+      "baseSalary": 35000,
+      "status": "Active"
+    },
+    {
+      "id": "st_4",
+      "name": "Vikram Joshi",
+      "role": "Full-Stack Web Developer",
+      "phone": "9820044556",
+      "baseSalary": 40000,
+      "status": "Active"
+    },
+    {
+      "id": "st_5",
+      "name": "Sneha Shah",
       "role": "Social Media Manager",
-      "phone": "+91 91234 55667",
+      "phone": "9820055667",
       "baseSalary": 25000,
       "status": "Active"
     }
   ],
-  "attendance": [],
+  "attendance": [
+    {
+      "id": "att_1",
+      "staffId": "st_1",
+      "date": "2026-08-26",
+      "status": "Present",
+      "checkIn": "09:45 AM"
+    },
+    {
+      "id": "att_2",
+      "staffId": "st_2",
+      "date": "2026-08-26",
+      "status": "Present",
+      "checkIn": "10:05 AM"
+    },
+    {
+      "id": "att_3",
+      "staffId": "st_3",
+      "date": "2026-08-26",
+      "status": "Present",
+      "checkIn": "09:30 AM"
+    },
+    {
+      "id": "att_4",
+      "staffId": "st_4",
+      "date": "2026-08-26",
+      "status": "Present",
+      "checkIn": "09:50 AM"
+    },
+    {
+      "id": "att_5",
+      "staffId": "st_5",
+      "date": "2026-08-26",
+      "status": "Present",
+      "checkIn": "10:00 AM"
+    }
+  ],
   "salaryPayments": [],
-  "tasks": [],
-  "contentItems": [],
-  "leads": [],
+  "tasks": [
+    {
+      "id": "tsk_1",
+      "title": "Schedule shoot with Dr. Nikhil for Saturday 11 AM",
+      "clientId": "cl_1",
+      "assignedTo": "st_1",
+      "deadline": "2026-08-26",
+      "priority": "High",
+      "status": "In Progress"
+    },
+    {
+      "id": "tsk_2",
+      "title": "Review ROAS for UrbanFit lead gen campaign",
+      "clientId": "cl_2",
+      "assignedTo": "st_3",
+      "deadline": "2026-08-26",
+      "priority": "High",
+      "status": "To Do"
+    },
+    {
+      "id": "tsk_3",
+      "title": "Finalize payment gateway integration for Craft Coffee",
+      "clientId": "cl_4",
+      "assignedTo": "st_4",
+      "deadline": "2026-08-26",
+      "priority": "Medium",
+      "status": "In Progress"
+    }
+  ],
+  "contentItems": [
+    {
+      "id": "cnt_1",
+      "clientId": "cl_1",
+      "date": "2026-08-26",
+      "type": "Reel Shoot",
+      "topic": "5 Dental Myths Busted by Dr. Nikhil",
+      "shootById": "st_1",
+      "assignedStaffId": "st_2",
+      "status": "Editing",
+      "driveLink": "https://drive.google.com/drive/folders/sample-apex",
+      "caption": "Are you brushing too hard? 🦷"
+    },
+    {
+      "id": "cnt_2",
+      "clientId": "cl_2",
+      "date": "2026-08-26",
+      "type": "Meta Ads Creative",
+      "topic": "Transformation 30-Day Bootcamp Promo",
+      "shootById": "st_1",
+      "assignedStaffId": "st_3",
+      "status": "Client Approval",
+      "driveLink": "https://drive.google.com/file/sample-urbanfit",
+      "caption": "Join before month end! 💪"
+    },
+    {
+      "id": "cnt_3",
+      "clientId": "cl_3",
+      "date": "2026-08-26",
+      "type": "Reel Shoot",
+      "topic": "Handcrafted Bridal Polki Showcase",
+      "shootById": "st_1",
+      "assignedStaffId": "st_2",
+      "status": "Shoot Done",
+      "driveLink": "https://drive.google.com/drive/folders/royal-jewels"
+    },
+    {
+      "id": "cnt_4",
+      "clientId": "cl_4",
+      "date": "2026-08-26",
+      "type": "Website Landing Page",
+      "topic": "Coffee Subscription & Cart Checkout",
+      "shootById": "",
+      "assignedStaffId": "st_4",
+      "status": "Editing"
+    }
+  ],
+  "leads": [
+    {
+      "id": "ld_1",
+      "name": "Kabir Varma",
+      "business": "Soul Sanctuary Spa & Wellness",
+      "phone": "9877011223",
+      "service": "Social Media Management (Reels + Posts)",
+      "budget": 40000,
+      "followUpDate": "2026-08-26",
+      "status": "Proposal Sent",
+      "createdAt": "2026-08-08"
+    },
+    {
+      "id": "ld_2",
+      "name": "Meera Deshmukh",
+      "business": "Artisan Home Decor",
+      "phone": "9877022334",
+      "service": "Meta & Instagram Ads Management",
+      "budget": 30000,
+      "followUpDate": "2026-08-26",
+      "status": "Contacted",
+      "createdAt": "2026-08-10"
+    },
+    {
+      "id": "ld_3",
+      "name": "Harsh Patel",
+      "business": "Patel Realty Infra",
+      "phone": "9877033445",
+      "service": "Complete Brand Marketing (SMMA)",
+      "budget": 120000,
+      "followUpDate": "2026-08-26",
+      "status": "Negotiation",
+      "createdAt": "2026-08-05"
+    }
+  ],
   "settings": {
     "agencyName": "AccountiX",
     "tagline": "Agency Business OS & Financial Engine",
     "phone": "+91 98765 43210",
     "email": "hello@accountix.agency",
     "currencySymbol": "₹",
-    "theme": "dark"
-  }
+    "theme": "light"
+  },
+  "isAuthenticated": true,
+  "currentUser": {
+    "id": "usr_admin",
+    "name": "Platform Admin",
+    "email": "admin@accountix.agency",
+    "password": "admin@123",
+    "role": "admin",
+    "companyId": "comp_1",
+    "companyName": "AccountiX Platform",
+    "lastActiveAt": "2026-08-26T09:27:26.445Z",
+    "status": "Active",
+    "purchasedDate": "2026-01-01",
+    "plan": "Enterprise"
+  },
+  "serviceCatalog": [
+    {
+      "id": "srv_1",
+      "name": "Social Media Management (Reels + Posts)",
+      "defaultAmount": 45000,
+      "cycle": "Monthly Retainer",
+      "description": "12 Reels + 8 Posts + Story sets + Monthly Growth Report"
+    },
+    {
+      "id": "srv_2",
+      "name": "Complete Brand Marketing (SMMA)",
+      "defaultAmount": 80000,
+      "cycle": "Monthly Retainer",
+      "description": "Full-funnel Social Media, Reels, Meta Ads, and Influencer Collabs"
+    },
+    {
+      "id": "srv_3",
+      "name": "Meta & Instagram Ads Management",
+      "defaultAmount": 35000,
+      "cycle": "Monthly Retainer",
+      "description": "Ad creative strategy, A/B testing, pixel optimization & ROAS scaling"
+    },
+    {
+      "id": "srv_4",
+      "name": "Google Ads & Search Marketing",
+      "defaultAmount": 30000,
+      "cycle": "Monthly Retainer",
+      "description": "Search, Display, Performance Max campaigns & keyword bidding"
+    },
+    {
+      "id": "srv_5",
+      "name": "Website Design & Development",
+      "defaultAmount": 55000,
+      "cycle": "Project-Based",
+      "description": "High-converting custom website/eCommerce store setup"
+    },
+    {
+      "id": "srv_6",
+      "name": "Reel Video Production & Editing",
+      "defaultAmount": 40000,
+      "cycle": "Monthly Retainer",
+      "description": "Scripting, on-site videographer shoot + 4K reels post-production"
+    },
+    {
+      "id": "srv_7",
+      "name": "Search Engine Optimization (SEO)",
+      "defaultAmount": 25000,
+      "cycle": "Monthly Retainer",
+      "description": "Technical on-page, off-page backlinks, and local Google Maps ranking"
+    },
+    {
+      "id": "srv_8",
+      "name": "Graphic Design & Branding Kit",
+      "defaultAmount": 20000,
+      "cycle": "One-Time",
+      "description": "Logo, typography guidelines, brand identity & social media templates"
+    },
+    {
+      "id": "srv_9",
+      "name": "Influencer Marketing & PR",
+      "defaultAmount": 50000,
+      "cycle": "Campaign-Based",
+      "description": "Creator sourcing, briefing, barter/paid outreach & campaign tracking"
+    }
+  ],
+  "view": "admin_overview",
+  "_search": "",
+  "_salesTab": "pipeline",
+  "_workTab": "kanban",
+  "_teamTab": "staff",
+  "_moneyTab": "profit",
+  "_clientTab": "clients",
+  "_simTargetProfit": 150000,
+  "_adminTab": "overview",
+  "_empTab": "workspace",
+  "_empContentTab": "all"
 }
