@@ -619,9 +619,9 @@
     "phone": "+91 98765 43210",
     "email": "hello@accountix.agency",
     "currencySymbol": "₹",
-    "theme": "light"
+    "theme": "dark"
   },
-  "isAuthenticated": true,
+  "isAuthenticated": false,
   "currentUser": {
     "id": "usr_manager",
     "name": "Jeet Rakholiya",
@@ -700,15 +700,22 @@
       "description": "Creator sourcing, briefing, barter/paid outreach & campaign tracking"
     }
   ],
-  "view": "dashboard",
+  "view": "content",
   "_search": "",
-  "_salesTab": "pipeline",
+  "_salesTab": "table",
   "_workTab": "kanban",
-  "_teamTab": "attendance",
+  "_teamTab": "staff",
   "_moneyTab": "profit",
   "_clientTab": "clients",
   "_simTargetProfit": 150000,
   "_adminTab": "overview",
   "_empTab": "workspace",
-  "_empContentTab": "all"
+  "_empContentTab": "all",
+  "_history": [
+    "dashboard",
+    "settings",
+    "sales",
+    "dashboard",
+    "content"
+  ]
 }
