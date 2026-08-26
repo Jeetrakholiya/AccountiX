@@ -610,7 +610,7 @@
       "service": "Meta & Instagram Ads Management",
       "budget": 30000,
       "followUpDate": "2026-08-26",
-      "status": "Contacted",
+      "status": "Won",
       "createdAt": "2026-08-10"
     },
     {
@@ -712,11 +712,11 @@
       "description": "Creator sourcing, briefing, barter/paid outreach & campaign tracking"
     }
   ],
-  "view": "dashboard",
+  "view": "sales",
   "_search": "",
-  "_salesTab": "pipeline",
+  "_salesTab": "table",
   "_workTab": "kanban",
-  "_teamTab": "staff",
+  "_teamTab": "payroll",
   "_moneyTab": "profit",
   "_clientTab": "clients",
   "_simTargetProfit": 150000,
@@ -728,6 +728,24 @@
     "settings",
     "sales",
     "dashboard",
-    "content"
+    "content",
+    "dashboard",
+    "clients",
+    "dashboard",
+    "clients",
+    "content",
+    "sales",
+    "team",
+    "dashboard",
+    "clients",
+    "finance",
+    "team",
+    "content",
+    "sales",
+    "clients",
+    "dashboard",
+    "clients",
+    "content",
+    "sales"
   ]
 }

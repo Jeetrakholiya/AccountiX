@@ -17,12 +17,17 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static frontend files
 app.use(express.static(__dirname));
 
-// Ensure data directory exists for local fallback database
-const DATA_DIR = path.join(__dirname, 'data');
+// Check for Serverless deployment environment (Vercel, AWS Lambda, Netlify)
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NOW_REGION);
+const DATA_DIR = IS_SERVERLESS ? path.join('/tmp', 'accountix_data') : path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+} catch (e) {
+  // Safe fallback in constrained serverless environments
 }
 
 // Supabase client initialization
@@ -412,4 +417,8 @@ function startServer(portToTry) {
   });
 }
 
-startServer(Number(PORT));
+module.exports = app;
+
+if (require.main === module) {
+  startServer(Number(PORT));
+}
