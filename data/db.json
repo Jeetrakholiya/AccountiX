@@ -73,7 +73,7 @@
       "role": "manager",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "lastActiveAt": "2026-08-26T09:56:44.704Z",
+      "lastActiveAt": "2026-08-26T10:54:10.629Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
       "plan": "1 Year Plan"
@@ -160,6 +160,18 @@
     }
   ],
   "loginLogs": [
+    {
+      "id": "log_1787741650638_pf1h",
+      "userId": "usr_manager",
+      "userName": "Jeet Rakholiya",
+      "userEmail": "jeet@accountix.agency",
+      "role": "manager",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 04:24:10 pm",
+      "authMethod": "Google OAuth 2.0 (Verified)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
     {
       "id": "log_1787738204704_s3kl",
       "userId": "usr_manager",
@@ -619,9 +631,9 @@
     "phone": "+91 98765 43210",
     "email": "hello@accountix.agency",
     "currencySymbol": "₹",
-    "theme": "dark"
+    "theme": "light"
   },
-  "isAuthenticated": false,
+  "isAuthenticated": true,
   "currentUser": {
     "id": "usr_manager",
     "name": "Jeet Rakholiya",
@@ -630,7 +642,7 @@
     "role": "manager",
     "companyId": "comp_1",
     "companyName": "AccountiX Media HQ",
-    "lastActiveAt": "2026-08-26T09:43:44.801Z",
+    "lastActiveAt": "2026-08-26T09:56:44.704Z",
     "status": "Active",
     "purchasedDate": "2026-01-15",
     "plan": "1 Year Plan"
@@ -700,9 +712,9 @@
       "description": "Creator sourcing, briefing, barter/paid outreach & campaign tracking"
     }
   ],
-  "view": "content",
+  "view": "dashboard",
   "_search": "",
-  "_salesTab": "table",
+  "_salesTab": "pipeline",
   "_workTab": "kanban",
   "_teamTab": "staff",
   "_moneyTab": "profit",
