@@ -1,0 +1,112 @@
+/* ==========================================================================
+   AccountiX — Responsive Styles & Mobile Ergonomics
+   ========================================================================== */
+
+.mobile-nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 6px;
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 12, 20, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 35;
+}
+
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #ffffff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px var(--brand-glow);
+  cursor: pointer;
+  z-index: 50;
+  border: none;
+  transition: transform 0.1s ease;
+}
+
+.fab:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 1080px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-1-2, .grid-2-1 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 820px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .mobile-overlay.open {
+    display: block;
+  }
+
+  .mobile-nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .topbar {
+    padding: 12px 18px;
+  }
+
+  main {
+    padding: 18px 18px 80px 18px;
+  }
+
+  .hero-earnings {
+    padding: 22px 20px;
+  }
+
+  .hero-value {
+    font-size: 34px;
+  }
+
+  .hero-stats-row {
+    gap: 18px;
+  }
+
+  .grid-4, .grid-3, .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .fab {
+    display: flex;
+  }
+
+  .quickadd-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .field-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}
