@@ -170,19 +170,33 @@ ALTER TABLE accountix_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_service_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_settings ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if re-running
+DROP POLICY IF EXISTS "Allow all clients" ON accountix_clients;
+DROP POLICY IF EXISTS "Allow all staff" ON accountix_staff;
+DROP POLICY IF EXISTS "Allow all packages" ON accountix_packages;
+DROP POLICY IF EXISTS "Allow all payments" ON accountix_payments;
+DROP POLICY IF EXISTS "Allow all expenses" ON accountix_expenses;
+DROP POLICY IF EXISTS "Allow all attendance" ON accountix_attendance;
+DROP POLICY IF EXISTS "Allow all salary payments" ON accountix_salary_payments;
+DROP POLICY IF EXISTS "Allow all tasks" ON accountix_tasks;
+DROP POLICY IF EXISTS "Allow all content" ON accountix_content;
+DROP POLICY IF EXISTS "Allow all leads" ON accountix_leads;
+DROP POLICY IF EXISTS "Allow all service catalog" ON accountix_service_catalog;
+DROP POLICY IF EXISTS "Allow all settings" ON accountix_settings;
+
 -- Allow full access for anon/authenticated roles for agency operations
-CREATE POLICY "Allow all access to clients" ON accountix_clients FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to staff" ON accountix_staff FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to packages" ON accountix_packages FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to payments" ON accountix_payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to expenses" ON accountix_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to attendance" ON accountix_attendance FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to salary payments" ON accountix_salary_payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to tasks" ON accountix_tasks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to content" ON accountix_content FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to leads" ON accountix_leads FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to service catalog" ON accountix_service_catalog FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all access to settings" ON accountix_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all clients" ON accountix_clients FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all staff" ON accountix_staff FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all packages" ON accountix_packages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all payments" ON accountix_payments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all expenses" ON accountix_expenses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all attendance" ON accountix_attendance FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all salary payments" ON accountix_salary_payments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all tasks" ON accountix_tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all content" ON accountix_content FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all leads" ON accountix_leads FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all service catalog" ON accountix_service_catalog FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all settings" ON accountix_settings FOR ALL USING (true) WITH CHECK (true);
 
 -- Indexes for maximum query performance
 CREATE INDEX IF NOT EXISTS idx_pkg_client ON accountix_packages(client_id);

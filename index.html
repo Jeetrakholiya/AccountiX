@@ -3086,6 +3086,19 @@ ALTER TABLE accountix_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_service_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow all clients" ON accountix_clients;
+DROP POLICY IF EXISTS "Allow all staff" ON accountix_staff;
+DROP POLICY IF EXISTS "Allow all packages" ON accountix_packages;
+DROP POLICY IF EXISTS "Allow all payments" ON accountix_payments;
+DROP POLICY IF EXISTS "Allow all expenses" ON accountix_expenses;
+DROP POLICY IF EXISTS "Allow all attendance" ON accountix_attendance;
+DROP POLICY IF EXISTS "Allow all salary payments" ON accountix_salary_payments;
+DROP POLICY IF EXISTS "Allow all tasks" ON accountix_tasks;
+DROP POLICY IF EXISTS "Allow all content" ON accountix_content;
+DROP POLICY IF EXISTS "Allow all leads" ON accountix_leads;
+DROP POLICY IF EXISTS "Allow all service catalog" ON accountix_service_catalog;
+DROP POLICY IF EXISTS "Allow all settings" ON accountix_settings;
+
 CREATE POLICY "Allow all clients" ON accountix_clients FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all staff" ON accountix_staff FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all packages" ON accountix_packages FOR ALL USING (true) WITH CHECK (true);
