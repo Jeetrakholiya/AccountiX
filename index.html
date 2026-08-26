@@ -219,7 +219,132 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
 .search-bar svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
 .search-bar input { border: none; background: transparent; outline: none; color: var(--text-primary); font-size: 13px; width: 100%; }
 .cmd-shortcut { font-size: 10px; font-family: 'JetBrains Mono', monospace; background: var(--bg-card); color: var(--text-muted); padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-subtle); }
-.topbar-actions { display: flex; align-items: center; gap: 8px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ================= EXECUTIVE PROFILE & ACTIONS DROPDOWN ================= */
+.profile-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.profile-trigger:hover, .profile-trigger.active {
+  background: var(--bg-elevated);
+  border-color: var(--border-focus);
+}
+.profile-caret {
+  font-size: 8px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  margin-left: 2px;
+}
+.profile-trigger.active .profile-caret {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 310px;
+  max-width: calc(100vw - 24px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg), 0 20px 40px rgba(0, 0, 0, 0.45);
+  padding: 8px;
+  z-index: 150;
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  backdrop-filter: blur(16px);
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dropdown-menu.show {
+  display: flex;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dropdown-header {
+  padding: 12px 14px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.dropdown-header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dropdown-header-avatar {
+  font-size: 26px;
+  line-height: 1;
+}
+.dropdown-header-name {
+  font-weight: 800;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.dropdown-header-email {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+.dropdown-item:hover {
+  background: var(--bg-subtle);
+  color: var(--brand-light);
+}
+.dropdown-item-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+}
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 6px;
+}
+.dropdown-item-danger {
+  color: var(--accent-rose);
+}
+.dropdown-item-danger:hover {
+  background: var(--accent-rose-soft);
+  color: var(--accent-rose);
+}
 
 /* Buttons */
 .btn {
@@ -1286,86 +1411,140 @@ function render() {
 
     <div class="main-content-wrapper">
       <div class="topbar">
-        <div class="topbar-left">
+        <div class="topbar-left" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
           <button class="mobile-nav-toggle" id="mobileNavToggle">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>
           
           <!-- ⬅️ Back Navigation Arrow Button -->
-          <button class="btn btn-ghost btn-sm" id="topbarBackBtn" onclick="navigateBack()" style="font-weight:700; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--border-card); border-radius:8px; background:var(--bg-card); color:var(--text-primary); cursor:pointer;" title="Go Back to Previous View (Alt + Left)">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button class="btn btn-ghost btn-sm" id="topbarBackBtn" onclick="navigateBack()" style="font-weight:700; display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border:1px solid var(--border-card); border-radius:8px; background:var(--bg-subtle); color:var(--text-primary); cursor:pointer; flex-shrink:0;" title="Go Back to Previous View (Alt + Left)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
             <span style="font-size:12px;">Back</span>
           </button>
 
-          <!-- Active Portal Identity Pill -->
-          <button class="btn btn-ghost btn-sm" id="topbarRoleBtn" style="${roleBadgeColor} font-weight:700;" title="Active Authenticated User (Click to View Session / Sign Out)">
-            <span>${user.avatar || '👤'}</span>
-            <span>${esc(user.name)}</span>
-            <span style="font-size:10px; opacity:0.8;">(${esc(user.role.toUpperCase())})</span>
-          </button>
-
-          <!-- Plan Badge & Upgrade Option for Managing Director -->
-          ${user.role === 'manager' ? `
-            <button class="btn btn-ghost btn-sm" onclick="openAgencyPlanModal()" style="border:1px solid rgba(16,185,129,0.35); color:var(--signal-cash); font-weight:700;" title="Current Subscription Plan (Click to Upgrade)">
-              💳 ${esc(user.plan || 'Pro Agency')} · Upgrade
-            </button>
-          ` : ''}
-
-          ${isSupabaseConnected() ? `
-            <div class="pulse-badge" id="topbarSupabaseBadge" style="background:rgba(16,185,129,0.12); border-color:rgba(16,185,129,0.3); color:var(--signal-cash); cursor:pointer;" title="Supabase Cloud Live (Click to configure in Settings)">
-              <span class="pulse-dot" style="background:var(--signal-cash); box-shadow:0 0 8px var(--signal-cash);"></span> ☁️ Supabase Live
-            </div>
-          ` : `
-            <div class="pulse-badge" id="topbarSupabaseBadge" style="background:rgba(245,158,11,0.12); border-color:rgba(245,158,11,0.3); color:var(--accent-amber); cursor:pointer;" title="Local Cache Mode (Click to connect Supabase in Settings)">
-              <span class="pulse-dot" style="background:var(--accent-amber); box-shadow:0 0 8px var(--accent-amber);"></span> 💾 Local Cache
-            </div>
-          `}
-
-          <div class="search-bar">
+          <!-- Search Bar -->
+          <div class="search-bar" style="flex:1; max-width:360px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input id="globalSearch" placeholder="${user.role === 'admin' ? 'Search agencies, paying customers, users...' : user.role === 'employee' ? 'Search my shoots, tasks, reels...' : 'Search clients, leads, deliverables...'}" value="${esc(STATE._search || '')}" />
+            <input id="globalSearch" placeholder="${user.role === 'admin' ? 'Search agencies, customers, logs...' : user.role === 'employee' ? 'Search shoots, tasks...' : 'Search clients, leads, invoices...'}" value="${esc(STATE._search || '')}" />
             <span class="cmd-shortcut">Ctrl+K</span>
           </div>
         </div>
 
-        <div class="topbar-actions">
+        <div class="topbar-actions" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+          <!-- Action CTA: Quick Add or Clock In or Re-Engage -->
           ${user.role === 'manager' ? `
-            <button class="btn btn-ghost btn-sm" id="topbarPricingBtn" title="Manager Package Pricing Catalog">
-              🏷️ Rate Card
+            <button class="btn btn-primary btn-sm" id="quickAddBtn" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
+              <span>⚡</span> Quick Add
             </button>
           ` : user.role === 'admin' ? `
-            <button class="btn btn-signal btn-sm" onclick="navigateTo('admin_reengage');">
-              ✉️ Re-Engage (${STATE.allUsers.filter(u => u.status.includes('Inactive') || u.status.includes('Idle') || u.status.includes('Never')).length})
+            <button class="btn btn-signal btn-sm" onclick="navigateTo('admin_reengage');" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
+              ✉️ Re-Engage
             </button>
           ` : `
-            <button class="btn btn-signal btn-sm" onclick="empPunchToday('Present')">
+            <button class="btn btn-signal btn-sm" onclick="empPunchToday('Present')" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
               🕒 Clock In
             </button>
           `}
-          
-          <button class="btn-icon" id="themeToggleBtn" title="Switch Theme (${isDark ? 'Light' : 'Dark'})">
-            ${isDark ? '☀️' : '🌙'}
-          </button>
-          <button class="btn-icon" id="notifBtn" title="Alerts & Reminders">
+
+          <!-- Notifications Icon -->
+          <button class="btn-icon" id="notifBtn" title="Alerts & Reminders" style="padding:6px 9px;">
             🔔 ${urgentCount > 0 ? `<span class="notif-dot">${urgentCount}</span>` : ''}
           </button>
 
-          ${user.role === 'manager' ? `
-            <button class="btn btn-primary" id="quickAddBtn">
-              <span>⚡</span> Quick Add
+          <!-- 👤 Profile & Actions Dropdown Menu -->
+          <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
+            <button class="profile-trigger" id="topbarProfileTrigger" title="Account Menu, Settings, Rate Card & Sign Out">
+              <span style="font-size:16px; line-height:1;">${user.avatar || '👤'}</span>
+              <span style="font-size:12px; font-weight:700; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.name.split(' ')[0])}</span>
+              <span class="pill ${user.role === 'admin' ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:9px; padding:1px 5px;">${user.role}</span>
+              <span class="profile-caret">▼</span>
             </button>
-          ` : `
-            <button class="btn btn-primary" onclick="openAuthModal()" title="View Authenticated Account & Session Details">
-              <span>👤</span> My Account
-            </button>
-          `}
 
-          <button class="btn btn-ghost btn-sm" onclick="logoutGateway()" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3); font-weight:700;" title="Sign Out & Return to Identity Gateway">
-            🚪 Sign Out
-          </button>
+            <!-- Dropdown Card -->
+            <div class="dropdown-menu" id="topbarDropdownMenu">
+              <!-- User Info Card -->
+              <div class="dropdown-header">
+                <div class="dropdown-header-user">
+                  <div class="dropdown-header-avatar">${user.avatar || '👤'}</div>
+                  <div style="min-width:0; flex:1;">
+                    <div class="dropdown-header-name">${esc(user.name)}</div>
+                    <div class="dropdown-header-email mono">${esc(user.email)}</div>
+                  </div>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border-subtle);">
+                  <span style="color:var(--text-muted); font-weight:600;">${esc(user.companyName || settings.agencyName || 'Primary Workspace')}</span>
+                  <span class="pill ${user.role === 'admin' ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:8.5px; text-transform:uppercase;">${user.role}</span>
+                </div>
+              </div>
+
+              <!-- Menu Options -->
+              ${user.role === 'manager' ? `
+                <div class="dropdown-item" onclick="closeDropdownMenu(); openAgencyPlanModal();">
+                  <div class="dropdown-item-left">
+                    <span>💳</span>
+                    <div>
+                      <div>Subscription Plan</div>
+                      <div style="font-size:11px; color:var(--signal-cash); font-weight:700;">${esc(user.plan || '1 Year Plan')} · Upgrade</div>
+                    </div>
+                  </div>
+                  <span style="font-size:11px; color:var(--text-muted);">➔</span>
+                </div>
+
+                <div class="dropdown-item" onclick="closeDropdownMenu(); openPricingCatalogModal();">
+                  <div class="dropdown-item-left">
+                    <span>🏷️</span>
+                    <span>Rate Card & Service Pricing</span>
+                  </div>
+                  <span style="font-size:11px; color:var(--text-muted);">➔</span>
+                </div>
+              ` : ''}
+
+              <!-- Database Mode -->
+              <div class="dropdown-item" onclick="closeDropdownMenu(); navigateTo('settings');">
+                <div class="dropdown-item-left">
+                  <span>${isSupabaseConnected() ? '☁️' : '💾'}</span>
+                  <div>
+                    <div>Database Engine</div>
+                    <div style="font-size:11px; color:${isSupabaseConnected() ? 'var(--signal-cash)' : 'var(--accent-amber)'}; font-weight:700;">
+                      ${isSupabaseConnected() ? 'Supabase Live Connected' : 'Local Storage Cache'}
+                    </div>
+                  </div>
+                </div>
+                <span class="pulse-dot" style="background:${isSupabaseConnected() ? 'var(--signal-cash)' : 'var(--accent-amber)'};"></span>
+              </div>
+
+              <!-- Theme Toggle -->
+              <div class="dropdown-item" onclick="closeDropdownMenu(); toggleTheme();">
+                <div class="dropdown-item-left">
+                  <span>${isDark ? '☀️' : '🌙'}</span>
+                  <span>Theme: ${isDark ? 'Obsidian Dark (Click for Light)' : 'Clean Slate (Click for Dark)'}</span>
+                </div>
+              </div>
+
+              <!-- Active Session Details -->
+              <div class="dropdown-item" onclick="closeDropdownMenu(); openAuthModal();">
+                <div class="dropdown-item-left">
+                  <span>🔐</span>
+                  <span>Active Session & Security</span>
+                </div>
+                <span style="font-size:11px; color:var(--text-muted);">➔</span>
+              </div>
+
+              <div class="dropdown-divider"></div>
+
+              <!-- Sign Out -->
+              <div class="dropdown-item dropdown-item-danger" onclick="closeDropdownMenu(); logoutGateway();">
+                <div class="dropdown-item-left">
+                  <span>🚪</span>
+                  <span style="font-weight:700;">Sign Out & Switch Account</span>
+                </div>
+                <span style="font-size:11px;">➔</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <main id="mainContainer"></main>
@@ -1381,10 +1560,22 @@ function render() {
   const qAdd = document.getElementById('quickAddBtn');
   if (qAdd) qAdd.onclick = openQuickAddModal;
   document.getElementById('mobileFabBtn').onclick = user.role === 'employee' ? () => empPunchToday('Present') : openQuickAddModal;
-  const prBtn = document.getElementById('topbarPricingBtn');
-  if (prBtn) prBtn.onclick = () => openPricingCatalogModal();
-  document.getElementById('themeToggleBtn').onclick = toggleTheme;
-  document.getElementById('topbarRoleBtn').onclick = openAuthModal;
+
+  const profTrigger = document.getElementById('topbarProfileTrigger');
+  const profDropdown = document.getElementById('topbarDropdownMenu');
+  if (profTrigger && profDropdown) {
+    profTrigger.onclick = (e) => {
+      e.stopPropagation();
+      const isOpen = profDropdown.classList.contains('show');
+      if (isOpen) {
+        profDropdown.classList.remove('show');
+        profTrigger.classList.remove('active');
+      } else {
+        profDropdown.classList.add('show');
+        profTrigger.classList.add('active');
+      }
+    };
+  }
   const sbBadge = document.getElementById('topbarSupabaseBadge');
   if (sbBadge) {
     sbBadge.onclick = () => {
@@ -5521,8 +5712,26 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     navigateBack();
   }
-  // Close modals: Escape
-  if (e.key === 'Escape') closeModal();
+  // Close modals & dropdowns: Escape
+  if (e.key === 'Escape') {
+    closeModal();
+    closeDropdownMenu();
+  }
+});
+
+function closeDropdownMenu() {
+  const menu = document.getElementById('topbarDropdownMenu');
+  const trigger = document.getElementById('topbarProfileTrigger');
+  if (menu) menu.classList.remove('show');
+  if (trigger) trigger.classList.remove('active');
+}
+window.closeDropdownMenu = closeDropdownMenu;
+
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('profileDropdownWrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    closeDropdownMenu();
+  }
 });
 
 loadState();
