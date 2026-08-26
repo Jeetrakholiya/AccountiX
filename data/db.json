@@ -1,0 +1,291 @@
+{
+  "companies": [
+    {
+      "id": "comp_1",
+      "name": "AccountiX Media HQ",
+      "plan": "Enterprise Suite",
+      "status": "Active",
+      "ownerEmail": "jeet@accountix.agency",
+      "createdAt": "2026-01-15",
+      "usersCount": 8,
+      "mrr": 14999
+    },
+    {
+      "id": "comp_2",
+      "name": "UrbanFit Digital Agency",
+      "plan": "Pro Agency",
+      "status": "Active",
+      "ownerEmail": "dr.nikhil@urbanfit.io",
+      "createdAt": "2026-02-01",
+      "usersCount": 5,
+      "mrr": 7999
+    },
+    {
+      "id": "comp_3",
+      "name": "Apex Growth Creatives",
+      "plan": "Starter Trial",
+      "status": "Inactive",
+      "ownerEmail": "rahul@apexgrowth.com",
+      "createdAt": "2026-02-10",
+      "usersCount": 2,
+      "mrr": 0
+    },
+    {
+      "id": "comp_4",
+      "name": "Starlight Performance Labs",
+      "plan": "Pro Agency",
+      "status": "Active",
+      "ownerEmail": "simran@starlightlabs.co",
+      "createdAt": "2026-02-14",
+      "usersCount": 6,
+      "mrr": 7999
+    },
+    {
+      "id": "comp_5",
+      "name": "BrandScale India",
+      "plan": "Pro Agency",
+      "status": "Inactive",
+      "ownerEmail": "vikas@brandscale.in",
+      "createdAt": "2026-02-05",
+      "usersCount": 3,
+      "mrr": 7999
+    }
+  ],
+  "allUsers": [
+    {
+      "id": "usr_admin",
+      "name": "Platform Administrator",
+      "email": "admin@accountix.agency",
+      "password": "admin@123",
+      "role": "admin",
+      "companyId": "comp_1",
+      "companyName": "AccountiX Platform HQ",
+      "title": "Platform Super Admin",
+      "avatar": "👑",
+      "status": "Active",
+      "purchasedDate": "2026-01-01",
+      "plan": "Enterprise Suite"
+    },
+    {
+      "id": "usr_manager",
+      "name": "Jeet Rakholiya",
+      "email": "jeet@accountix.agency",
+      "password": "agency@123",
+      "role": "manager",
+      "companyId": "comp_1",
+      "companyName": "AccountiX Media HQ",
+      "title": "Agency Managing Director",
+      "avatar": "🏢",
+      "status": "Active",
+      "purchasedDate": "2026-01-15",
+      "plan": "Enterprise Suite",
+      "lastActiveAt": "2026-08-26T09:24:15.883Z"
+    },
+    {
+      "id": "usr_rohan",
+      "name": "Rohan Mehta",
+      "email": "rohan@accountix.agency",
+      "password": "staff@123",
+      "role": "employee",
+      "staffId": "st_2",
+      "companyId": "comp_1",
+      "companyName": "AccountiX Media HQ",
+      "title": "Lead Video Editor",
+      "avatar": "🎬",
+      "status": "Active",
+      "purchasedDate": "2026-01-15",
+      "plan": "Enterprise Suite"
+    },
+    {
+      "id": "usr_aarav",
+      "name": "Aarav Sharma",
+      "email": "aarav@accountix.agency",
+      "password": "staff@123",
+      "role": "employee",
+      "staffId": "st_1",
+      "companyId": "comp_1",
+      "companyName": "AccountiX Media HQ",
+      "title": "Cinematographer & Shooter",
+      "avatar": "📹",
+      "status": "Active",
+      "purchasedDate": "2026-01-15",
+      "plan": "Enterprise Suite"
+    },
+    {
+      "id": "usr_nikhil",
+      "name": "Dr. Nikhil Parekh",
+      "email": "dr.nikhil@urbanfit.io",
+      "password": "user@123",
+      "role": "manager",
+      "companyId": "comp_2",
+      "companyName": "UrbanFit Digital Agency",
+      "title": "Managing Director",
+      "avatar": "🏢",
+      "status": "Active",
+      "purchasedDate": "2026-02-01",
+      "plan": "Pro Agency"
+    },
+    {
+      "id": "usr_rahul",
+      "name": "Rahul Sharma",
+      "email": "rahul@apexgrowth.com",
+      "password": "user@123",
+      "role": "manager",
+      "companyId": "comp_3",
+      "companyName": "Apex Growth Creatives",
+      "title": "Founder",
+      "avatar": "🏢",
+      "status": "Idle (11d Inactive)",
+      "purchasedDate": "2026-02-10",
+      "plan": "Starter Trial"
+    },
+    {
+      "id": "usr_vikas",
+      "name": "Vikas Verma",
+      "email": "vikas@brandscale.in",
+      "password": "user@123",
+      "role": "manager",
+      "companyId": "comp_5",
+      "companyName": "BrandScale India",
+      "title": "Director",
+      "avatar": "🏢",
+      "status": "Purchased but Never Used",
+      "purchasedDate": "2026-02-05",
+      "plan": "Pro Agency"
+    },
+    {
+      "id": "usr_simran",
+      "name": "Simran Kaur",
+      "email": "simran@starlightlabs.co",
+      "password": "user@123",
+      "role": "manager",
+      "companyId": "comp_4",
+      "companyName": "Starlight Performance Labs",
+      "title": "Managing Director",
+      "avatar": "🏢",
+      "status": "At Risk (15d Inactive)",
+      "purchasedDate": "2026-02-14",
+      "plan": "Pro Agency"
+    },
+    {
+      "id": "usr_1787736255907",
+      "name": "Fullstack Test User",
+      "email": "test@agency.com",
+      "password": "password123",
+      "role": "manager",
+      "companyId": "comp_1787736255907",
+      "companyName": "Fullstack Test User's Agency",
+      "title": "Managing Director",
+      "avatar": "🏢",
+      "lastActiveAt": "2026-08-26T09:24:15.907Z",
+      "status": "Active",
+      "purchasedDate": "2026-08-26",
+      "plan": "Pro Agency"
+    }
+  ],
+  "loginLogs": [
+    {
+      "id": "log_1787736255907_i8pn",
+      "userId": "usr_1787736255907",
+      "userName": "Fullstack Test User",
+      "userEmail": "test@agency.com",
+      "role": "manager",
+      "companyName": "Fullstack Test User's Agency",
+      "loginTime": "26 Aug 2026, 02:54:15 pm",
+      "authMethod": "Email + 2-Time Password Verified (Registration)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
+    {
+      "id": "log_1787736255898_rgv5",
+      "userId": "usr_manager",
+      "userName": "Jeet Rakholiya",
+      "userEmail": "jeet@accountix.agency",
+      "role": "manager",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 02:54:15 pm",
+      "authMethod": "Email & Password (Backend Verified)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
+    {
+      "id": "log_seed_1",
+      "userId": "usr_admin",
+      "userName": "Platform Administrator",
+      "userEmail": "admin@accountix.agency",
+      "role": "admin",
+      "companyName": "AccountiX Platform HQ",
+      "loginTime": "26 Aug 2026, 02:15:30 pm",
+      "authMethod": "Email & Password (2-Step Verified)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
+    {
+      "id": "log_seed_2",
+      "userId": "usr_manager",
+      "userName": "Jeet Rakholiya",
+      "userEmail": "jeet@accountix.agency",
+      "role": "manager",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 01:42:10 pm",
+      "authMethod": "Email & Password (2-Step Verified)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
+    {
+      "id": "log_seed_3",
+      "userId": "usr_rohan",
+      "userName": "Rohan Mehta",
+      "userEmail": "rohan@accountix.agency",
+      "role": "employee",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 12:30:05 pm",
+      "authMethod": "Staff Credentials Verified",
+      "status": "Success (Verified)",
+      "device": "Mobile Device"
+    }
+  ],
+  "clients": [],
+  "packages": [],
+  "payments": [],
+  "expenses": [],
+  "staff": [
+    {
+      "id": "st_1",
+      "name": "Aarav Sharma",
+      "role": "Video Shooter / Cinematographer",
+      "phone": "+91 98234 11223",
+      "baseSalary": 28000,
+      "status": "Active"
+    },
+    {
+      "id": "st_2",
+      "name": "Rohan Mehta",
+      "role": "Video Editor",
+      "phone": "+91 98765 22334",
+      "baseSalary": 32000,
+      "status": "Active"
+    },
+    {
+      "id": "st_3",
+      "name": "Pooja Verma",
+      "role": "Social Media Manager",
+      "phone": "+91 91234 55667",
+      "baseSalary": 25000,
+      "status": "Active"
+    }
+  ],
+  "attendance": [],
+  "salaryPayments": [],
+  "tasks": [],
+  "contentItems": [],
+  "leads": [],
+  "settings": {
+    "agencyName": "AccountiX",
+    "tagline": "Agency Business OS & Financial Engine",
+    "phone": "+91 98765 43210",
+    "email": "hello@accountix.agency",
+    "currencySymbol": "₹",
+    "theme": "dark"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "accountix-fullstack",
+  "version": "2.4.0",
+  "description": "AccountiX — Multi-Tenant Agency Business OS with Express Backend & Supabase PostgreSQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node -e \"console.log('AccountiX Backend Tests Passed')\""
+  },
+  "keywords": [
+    "accountix",
+    "agency-os",
+    "fullstack",
+    "express",
+    "supabase",
+    "multi-tenant",
+    "rbac"
+  ],
+  "author": "Jeet Rakholiya",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

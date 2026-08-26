@@ -5,6 +5,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Dependencies
+node_modules/
+
 # Environment / local configs
 .env
 .env.local

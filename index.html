@@ -411,6 +411,9 @@ tr:last-child td { border-bottom: none; }
 <div class="overlay" id="overlay"></div>
 <div id="toast"></div>
 
+<!-- Supabase JS Client & Fullstack API Client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/api.js"></script>
 <script>
 /* ================= GLOBAL UTILITIES & FORMATTERS ================= */
 const uid = (p = 'ax') => `${p}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
@@ -813,9 +816,12 @@ function saveLocalState() {
 function saveState() {
   saveLocalState();
   queueSupabasePush();
+  if (window.AccountiX_API && typeof window.AccountiX_API.syncState === 'function') {
+    window.AccountiX_API.syncState(STATE);
+  }
 }
 
-function loadState() {
+async function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -831,6 +837,17 @@ function loadState() {
   }
   if (STATE.settings && STATE.settings.theme) {
     document.documentElement.setAttribute('data-theme', STATE.settings.theme);
+  }
+
+  // Attempt backend state hydration
+  if (window.AccountiX_API && typeof window.AccountiX_API.fetchState === 'function') {
+    try {
+      const serverState = await window.AccountiX_API.fetchState();
+      if (serverState && serverState.allUsers && serverState.allUsers.length) {
+        if (serverState.loginLogs) STATE.loginLogs = serverState.loginLogs;
+        if (serverState.allUsers) STATE.allUsers = serverState.allUsers;
+      }
+    } catch(e) {}
   }
 
   // If Supabase credentials configured, trigger background sync
@@ -1533,6 +1550,9 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
       else STATE.view = 'dashboard';
 
       recordLoginAudit(user, 'Email & Password (Verified)');
+      if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
+        window.AccountiX_API.login(email, pass, targetRole).catch(() => {});
+      }
       closeModal();
       render();
       toast(`✓ Verified & Logged in as ${user.name} (${user.role.toUpperCase()})`);
@@ -1608,6 +1628,9 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
       else STATE.view = 'dashboard';
 
       recordLoginAudit(newUser, 'Email + 2-Time Password Verified');
+      if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
+        window.AccountiX_API.register(name, email, pass1, pass2, targetRole).catch(() => {});
+      }
       closeModal();
       render();
       toast(`🎉 Account created with 2-time password verification! Welcome, ${name}.`);

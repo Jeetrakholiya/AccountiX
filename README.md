@@ -21,6 +21,45 @@
 
 ---
 
+## 🚀 Fullstack Architecture (Frontend + Express Backend + Supabase)
+
+AccountiX is built with a complete modern fullstack architecture:
+
+```
++-----------------------------------------------------------------------------+
+|                          ACCOUNTIX FULLSTACK SYSTEM                         |
++-----------------------------------------------------------------------------+
+|  🎨 FRONTEND SPA         |  ⚡ BACKEND REST API       |  🗄️ DATABASE LAYER   |
+|  • HTML5 / Vanilla JS    |  • Express.js (Node.js)    |  • Supabase (Postgres)  |
+|  • Role Portals (Admin,  |  • Auth & 2-Step Verify    |  • Persistent JSON File |
+|    Manager, Employee)    |  • Security Audit Logger   |  • Real-time Sync & RLS |
+|  • Rich Visual Design    |  • Multi-Tenant CRUD APIs  |  • 100% Offline Support |
++-----------------------------------------------------------------------------+
+```
+
+### ⚡ Running the Fullstack Application:
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Start the Backend Server (runs on http://localhost:5000)
+npm start
+
+# Or with live auto-reload:
+npm run dev
+```
+
+- **Frontend URL**: `http://localhost:5000`
+- **Backend API Health Check**: `http://localhost:5000/api/health`
+- **REST Endpoints**:
+  - `POST /api/auth/login` (Email + Password authentication)
+  - `POST /api/auth/register` (2-Time Password verification)
+  - `GET /api/admin/logs` (Live login & security audit trail)
+  - `GET /api/state` & `POST /api/state/sync` (Multi-tenant state synchronization)
+  - `GET /api/:entity` (CRUD for companies, clients, staff, packages, payments, etc.)
+
+---
+
 ## ⚡ Supabase Setup (3 Quick Steps)
 
 ### Step 1: Create a Supabase Project
@@ -31,24 +70,17 @@
 
 ### Step 2: Run the SQL Schema
 1. In your Supabase Dashboard, open **SQL Editor** > **New Query**.
-2. Copy and paste the contents of [`supabase_schema.sql`](file:///a:/AccountiX/supabase_schema.sql) (or click **"Copy SQL Schema Script"** inside AccountiX Settings).
-3. Click **Run** to generate all 12 agency tables, relations, and RLS policies.
+2. Copy and paste the contents of [`supabase_schema.sql`](file:///a:/AccountiX/supabase_schema.sql).
+3. Click **Run** to generate all 15 agency tables, relations, and RLS security policies.
 
 ### Step 3: Connect AccountiX
-1. Open [`index.html`](file:///a:/AccountiX/index.html) in your browser.
-2. Go to **`⚙️ Settings`** > **Supabase Cloud Database & PostgreSQL Sync**.
-3. Paste your **Project URL** and **Anon Public Key**.
-4. Click **`⚡ Save & Connect Supabase`**.
-5. Click **`⬆️ Push All Local Data to Supabase`** to migrate your existing records to the cloud!
-
----
-
-## 🚀 Quick Start Guide
-
-### 1. Launching the App
-Simply open [`index.html`](file:///a:/AccountiX/index.html) in any modern browser:
-- **Direct File**: Double-click `index.html` or open `file:///a:/AccountiX/index.html`.
-- **Local Server**: Run `npx serve .` or any static HTTP server.
+1. Open `.env` and set:
+   ```env
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key
+   ```
+2. Or in the web interface, navigate to **`⚙️ Settings`** > **Supabase Cloud Database & PostgreSQL Sync** to save your keys.
+3. Click **`⬆️ Push All Local Data to Supabase`** to migrate records to the cloud!
 
 ### 2. Switching Themes
 - Click the **`☀️ / 🌙`** toggle button on the top navigation bar or go to **Settings**.
