@@ -1498,16 +1498,16 @@ function render() {
         <div class="topbar-actions" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
           <!-- Action CTA: Quick Add or Clock In or Re-Engage -->
           ${user.role === 'manager' ? `
-            <button class="btn btn-primary btn-sm" id="quickAddBtn" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
-              <span>⚡</span> Quick Add
+            <button class="btn btn-primary btn-sm topbar-cta-btn" id="quickAddBtn" style="padding:6px 10px; font-weight:700; font-size:12px;">
+              <span>⚡</span> <span class="btn-text">Quick Add</span>
             </button>
           ` : user.role === 'admin' ? `
-            <button class="btn btn-signal btn-sm" onclick="navigateTo('admin_reengage');" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
-              ✉️ Re-Engage
+            <button class="btn btn-signal btn-sm topbar-cta-btn" onclick="navigateTo('admin_reengage');" style="padding:6px 10px; font-weight:700; font-size:12px;">
+              <span>✉️</span> <span class="btn-text">Re-Engage</span>
             </button>
           ` : `
-            <button class="btn btn-signal btn-sm" onclick="empPunchToday('Present')" style="padding:6px 11px; font-weight:700; font-size:12.5px;">
-              🕒 Clock In
+            <button class="btn btn-signal btn-sm topbar-cta-btn" onclick="empPunchToday('Present')" style="padding:6px 10px; font-weight:700; font-size:12px;">
+              <span>🕒</span> <span class="btn-text">Clock In</span>
             </button>
           `}
 

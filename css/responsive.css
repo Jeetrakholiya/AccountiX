@@ -31,9 +31,9 @@ button:active, .btn:active {
   color: var(--text-primary);
   cursor: pointer;
   padding: 0;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -113,54 +113,100 @@ button:active, .btn:active {
   }
 
   .mobile-nav-toggle {
-    display: flex;
+    display: flex !important;
   }
 
-  /* Single-line sleek topbar on mobile */
+  /* Single-line sleek topbar with zero overlapping */
   .topbar {
     padding: 8px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     flex-wrap: nowrap !important;
-    gap: 6px !important;
-    justify-content: space-between;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .topbar-left {
-    flex: 1;
-    min-width: 0;
+    display: flex !important;
+    align-items: center !important;
     gap: 6px !important;
-    display: flex;
-    align-items: center;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+
+  .mobile-nav-toggle {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #topbarBackBtn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    gap: 0 !important;
+  }
+  #topbarBackBtn .btn-text {
+    display: none !important;
   }
 
   .search-bar {
-    max-width: 150px;
-    padding: 5px 8px;
-  }
-  .search-bar .cmd-shortcut {
-    display: none;
-  }
-  .search-bar input {
-    font-size: 11.5px;
+    display: none !important;
   }
 
   .topbar-actions {
+    display: flex !important;
+    align-items: center !important;
     gap: 5px !important;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
+    flex: 0 0 auto !important;
+    margin-left: auto !important;
   }
 
-  .topbar-actions .btn {
-    padding: 5px 9px;
-    font-size: 11.5px;
+  .topbar-cta-btn {
+    padding: 6px 9px !important;
+    font-size: 11.5px !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  #notifBtn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
   }
 
   .profile-trigger {
-    padding: 4px 8px;
-    gap: 4px;
+    padding: 4px 8px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+    height: 34px !important;
+  }
+  .profile-trigger .pill {
+    display: none !important;
   }
   .profile-trigger span:nth-child(2) {
-    max-width: 65px;
+    max-width: 60px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   main {
@@ -243,30 +289,6 @@ button:active, .btn:active {
     flex: 0 0 85vw;
     max-width: 320px;
   }
-}
-
-/* ================= EXTRA SMALL PHONES (<= 540px) ================= */
-@media (max-width: 540px) {
-  .search-bar {
-    display: none !important;
-  }
-
-  #topbarBackBtn .btn-text {
-    display: none !important;
-  }
-
-  #topbarBackBtn {
-    padding: 6px 8px !important;
-    gap: 0 !important;
-  }
-
-  .profile-trigger .pill {
-    display: none !important;
-  }
-
-  .topbar {
-    padding: 6px 10px !important;
-  }
 
   .dropdown-backdrop {
     z-index: 99990 !important;
@@ -285,15 +307,42 @@ button:active, .btn:active {
   }
 }
 
-/* ================= ULTRA-COMPACT PHONES (<= 400px) ================= */
-@media (max-width: 400px) {
+/* ================= EXTRA SMALL PHONES (<= 480px) ================= */
+@media (max-width: 480px) {
+  .topbar {
+    padding: 6px 8px !important;
+    gap: 4px !important;
+  }
+
+  .topbar-left {
+    gap: 4px !important;
+  }
+
+  .topbar-actions {
+    gap: 4px !important;
+  }
+
+  .topbar-cta-btn .btn-text {
+    display: none !important;
+  }
+
+  .topbar-cta-btn {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
   .profile-trigger span:nth-child(2) {
     display: none !important;
   }
 
-  .topbar-actions .btn {
-    padding: 5px 7px;
-    font-size: 11px;
+  .profile-trigger {
+    padding: 0 8px !important;
+    height: 34px !important;
   }
 
   .hero-stats-row {
