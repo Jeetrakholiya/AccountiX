@@ -73,7 +73,7 @@
       "role": "manager",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "lastActiveAt": "2026-08-26T09:43:44.801Z",
+      "lastActiveAt": "2026-08-26T09:56:44.704Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
       "plan": "1 Year Plan"
@@ -160,6 +160,18 @@
     }
   ],
   "loginLogs": [
+    {
+      "id": "log_1787738204704_s3kl",
+      "userId": "usr_manager",
+      "userName": "Jeet Rakholiya",
+      "userEmail": "jeet@accountix.agency",
+      "role": "manager",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 03:26:44 pm",
+      "authMethod": "Email & Password (Verified)",
+      "status": "Success (Verified)",
+      "device": "Mobile Device"
+    },
     {
       "id": "log_1787737424802_lgtq",
       "userId": "usr_manager",
@@ -607,7 +619,7 @@
     "phone": "+91 98765 43210",
     "email": "hello@accountix.agency",
     "currencySymbol": "₹",
-    "theme": "dark"
+    "theme": "light"
   },
   "isAuthenticated": true,
   "currentUser": {
@@ -618,10 +630,10 @@
     "role": "manager",
     "companyId": "comp_1",
     "companyName": "AccountiX Media HQ",
-    "lastActiveAt": "2026-08-26T09:27:26.445Z",
+    "lastActiveAt": "2026-08-26T09:43:44.801Z",
     "status": "Active",
     "purchasedDate": "2026-01-15",
-    "plan": "1 Month Plan"
+    "plan": "1 Year Plan"
   },
   "serviceCatalog": [
     {
@@ -692,10 +704,10 @@
   "_search": "",
   "_salesTab": "pipeline",
   "_workTab": "kanban",
-  "_teamTab": "staff",
+  "_teamTab": "attendance",
   "_moneyTab": "profit",
   "_clientTab": "clients",
-  "_simTargetProfit": 175000,
+  "_simTargetProfit": 150000,
   "_adminTab": "overview",
   "_empTab": "workspace",
   "_empContentTab": "all"

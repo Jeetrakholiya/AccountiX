@@ -1112,6 +1112,62 @@ function closeModal() {
 }
 window.closeModal = closeModal;
 
+/* ================= NAVIGATION HISTORY & BACK ARROW CONTROLLER ================= */
+function navigateTo(newView) {
+  if (!STATE._history) STATE._history = [];
+  if (STATE.view && STATE._history[STATE._history.length - 1] !== STATE.view) {
+    STATE._history.push(STATE.view);
+  }
+  STATE.view = newView;
+  STATE._search = '';
+  if (STATE._history[STATE._history.length - 1] !== newView) {
+    STATE._history.push(newView);
+  }
+  render();
+}
+window.navigateTo = navigateTo;
+
+function navigateBack() {
+  // 1. If an overlay modal is open, close modal as previous step
+  const overlay = document.getElementById('overlay');
+  if (overlay && overlay.classList.contains('open')) {
+    closeModal();
+    return;
+  }
+
+  // 2. If searching, clear search and return to current page
+  if (STATE._search && STATE._search.trim().length > 0) {
+    STATE._search = '';
+    render();
+    return;
+  }
+
+  // 3. Pop from navigation history
+  if (STATE._history && STATE._history.length > 1) {
+    STATE._history.pop(); // remove current view
+    const prevView = STATE._history.pop();
+    if (prevView && prevView !== STATE.view) {
+      STATE.view = prevView;
+      if (!STATE._history) STATE._history = [];
+      STATE._history.push(prevView);
+      render();
+      return;
+    }
+  }
+
+  // 4. Default fallback based on role
+  const role = (STATE.currentUser && STATE.currentUser.role) || 'manager';
+  const defaultRoot = role === 'admin' ? 'admin_overview' : role === 'employee' ? 'emp_workspace' : 'dashboard';
+  if (STATE.view !== defaultRoot) {
+    STATE.view = defaultRoot;
+    STATE._history = [defaultRoot];
+    render();
+  } else {
+    toast('Already on primary workspace page');
+  }
+}
+window.navigateBack = navigateBack;
+
 /* ================= DYNAMIC RBAC NAVIGATION ITEMS ================= */
 function getNavItems() {
   const role = (STATE.currentUser && STATE.currentUser.role) || 'manager';
@@ -1235,6 +1291,15 @@ function render() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
           </button>
           
+          <!-- ⬅️ Back Navigation Arrow Button -->
+          <button class="btn btn-ghost btn-sm" id="topbarBackBtn" onclick="navigateBack()" style="font-weight:700; display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:1px solid var(--border-card); border-radius:8px; background:var(--bg-card); color:var(--text-primary); cursor:pointer;" title="Go Back to Previous View (Alt + Left)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span style="font-size:12px;">Back</span>
+          </button>
+
           <!-- Active Portal Identity Pill -->
           <button class="btn btn-ghost btn-sm" id="topbarRoleBtn" style="${roleBadgeColor} font-weight:700;" title="Active Authenticated User (Click to View Session / Sign Out)">
             <span>${user.avatar || '👤'}</span>
@@ -1272,7 +1337,7 @@ function render() {
               🏷️ Rate Card
             </button>
           ` : user.role === 'admin' ? `
-            <button class="btn btn-signal btn-sm" onclick="STATE.view='admin_reengage'; renderMain();">
+            <button class="btn btn-signal btn-sm" onclick="navigateTo('admin_reengage');">
               ✉️ Re-Engage (${STATE.allUsers.filter(u => u.status.includes('Inactive') || u.status.includes('Idle') || u.status.includes('Never')).length})
             </button>
           ` : `
@@ -1310,7 +1375,7 @@ function render() {
   `;
 
   document.querySelectorAll('[data-nav-id]').forEach(el => {
-    el.onclick = () => { STATE.view = el.dataset.navId; STATE._search = ''; render(); };
+    el.onclick = () => { navigateTo(el.dataset.navId); };
   });
   document.getElementById('notifBtn').onclick = openNotificationsModal;
   const qAdd = document.getElementById('quickAddBtn');
@@ -2109,7 +2174,7 @@ function renderAdminOverviewView() {
         <p class="view-sub" style="color:var(--text-secondary);">Global Agency Tenants, User Activity Tracking & Inactive Customer Retention Hub</p>
       </div>
       <div style="display:flex; gap:8px;">
-        <button class="btn btn-signal" onclick="STATE.view='admin_reengage'; renderMain();">✉️ Re-Engage Inactive Users (${inactiveUsers.length})</button>
+        <button class="btn btn-signal" onclick="navigateTo('admin_reengage');">✉️ Re-Engage Inactive Users (${inactiveUsers.length})</button>
         <button class="btn btn-ghost" onclick="openAuthModal()">👤 Active Session</button>
       </div>
     </div>
@@ -2138,7 +2203,7 @@ function renderAdminOverviewView() {
             <div style="font-size:12.5px; color:var(--text-secondary);">Proactively send a personalized re-engagement support email with setup assistance to prevent customer churn.</div>
           </div>
         </div>
-        <button class="btn btn-signal btn-sm" onclick="STATE.view='admin_reengage'; renderMain();">
+        <button class="btn btn-signal btn-sm" onclick="navigateTo('admin_reengage');">
           ✉️ Open Re-Engagement Mailer ➔
         </button>
       </div>
@@ -2149,7 +2214,7 @@ function renderAdminOverviewView() {
       <div class="card">
         <div class="card-title">
           <span>🏢 Registered Agency Tenants (${companies.length})</span>
-          <button class="btn btn-ghost btn-sm" onclick="STATE.view='admin_companies'; renderMain();">View All ➔</button>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('admin_companies');">View All ➔</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -2171,7 +2236,7 @@ function renderAdminOverviewView() {
       <div class="card">
         <div class="card-title">
           <span>👥 User Activity & Engagement Pulse</span>
-          <button class="btn btn-ghost btn-sm" onclick="STATE.view='admin_users'; renderMain();">User Table ➔</button>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('admin_users');">User Table ➔</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -2195,7 +2260,7 @@ function renderAdminOverviewView() {
     <div class="card" style="margin-top:24px;">
       <div class="card-title">
         <span>🔐 Recent User Authentications & Login Logs (${(STATE.loginLogs || []).length})</span>
-        <button class="btn btn-primary btn-sm" onclick="STATE.view='admin_logs'; renderMain();">Full Audit Trail ➔</button>
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('admin_logs');">Full Audit Trail ➔</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -5450,6 +5515,11 @@ window.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
     e.preventDefault();
     openNewClientModal();
+  }
+  // Navigate back: Alt + ArrowLeft
+  if (e.altKey && e.key === 'ArrowLeft') {
+    e.preventDefault();
+    navigateBack();
   }
   // Close modals: Escape
   if (e.key === 'Escape') closeModal();
