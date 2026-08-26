@@ -1112,7 +1112,7 @@ function render() {
           </button>
           
           <!-- Active Portal Identity Pill -->
-          <button class="btn btn-ghost btn-sm" id="topbarRoleBtn" style="${roleBadgeColor} font-weight:700;" title="Switch Role / Google Auth">
+          <button class="btn btn-ghost btn-sm" id="topbarRoleBtn" style="${roleBadgeColor} font-weight:700;" title="Active Authenticated User (Click to View Session / Sign Out)">
             <span>${user.avatar || '👤'}</span>
             <span>${esc(user.name)}</span>
             <span style="font-size:10px; opacity:0.8;">(${esc(user.role.toUpperCase())})</span>
@@ -1169,8 +1169,8 @@ function render() {
               <span>⚡</span> Quick Add
             </button>
           ` : `
-            <button class="btn btn-primary" onclick="openAuthModal()">
-              <span>🔐</span> Switch Role
+            <button class="btn btn-primary" onclick="openAuthModal()" title="View Authenticated Account & Session Details">
+              <span>👤</span> My Account
             </button>
           `}
 
@@ -1369,22 +1369,19 @@ function renderLandingGateway() {
             <p style="font-size:13px; color:#cbd5e1; line-height:1.5; margin:0 0 12px 0;">
               Daily punch clock, 31-day attendance matrix, assigned video shoots & reels with Google Drive submit, tasks & personal salary slips.
             </p>
-
-            <!-- Dynamic Staff Selector -->
-            <div class="field" style="margin-bottom:14px;">
-              <label style="color:#e2e8f0; font-size:11.5px; font-weight:700;">Quick Staff Switcher</label>
-              <select id="empGatewayStaffSelect" style="background:#1e293b; color:#ffffff; border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:8px 10px; font-size:12.5px; width:100%; font-weight:600;">
-                ${staffList.length ? staffList.map(s => `<option value="${s.id}">${esc(s.name)} — ${esc(s.role || 'Staff')}</option>`).join('') : `<option value="">No employees added yet by MD</option>`}
-              </select>
-            </div>
+            <ul style="font-size:12px; color:#94a3b8; line-height:1.8; padding-left:18px; margin:0 0 18px 0;">
+              <li>Personal Punch Clock & Attendance</li>
+              <li>Assigned Content & Drive Link Submissions</li>
+              <li>Task Deadlines & Monthly Salary Slips</li>
+            </ul>
           </div>
           
           <div>
             <button class="btn btn-signal" onclick="openEmailPasswordAuthModal('employee', 'login')" style="width:100%; justify-content:center; padding:11px; font-weight:800; font-size:13.5px; margin-bottom:8px;">
-              🔑 Staff Sign In (Email + Password) ➔
+              🔑 Staff Sign In (Email & Password) ➔
             </button>
-            <button class="btn btn-ghost" id="empGatewayEnterBtn" style="width:100%; justify-content:center; font-size:12px; color:#6ee7b7;">
-              🕒 1-Click Clock In & Enter
+            <button class="btn btn-ghost" onclick="openEmailPasswordAuthModal('employee', 'register')" style="width:100%; justify-content:center; font-size:12px; color:#6ee7b7;">
+              ✨ First-Time Staff Password Verification
             </button>
           </div>
         </div>
@@ -1399,20 +1396,7 @@ function renderLandingGateway() {
   `;
 }
 
-function attachLandingGateway() {
-  const empBtn = document.getElementById('empGatewayEnterBtn');
-  if (empBtn) {
-    empBtn.onclick = () => {
-      const sel = document.getElementById('empGatewayStaffSelect');
-      const staffId = sel ? sel.value : null;
-      if (!staffId) {
-        toast('No staff member selected. Managing Director must first add employees.');
-        return;
-      }
-      loginGateway('employee', staffId, 'Quick Staff Selector');
-    };
-  }
-}
+function attachLandingGateway() {}
 
 /* ================= EMAIL + PASSWORD & 2-TIME PASSWORD VERIFICATION MODAL ================= */
 function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
@@ -1908,25 +1892,6 @@ function toggleTheme() {
 }
 
 /* ================= ROLE & AUTHENTICATION CONTROLLER ================= */
-function switchRole(profileId) {
-  const prof = DEMO_PROFILES.find(p => p.id === profileId) || DEMO_PROFILES[1];
-  STATE.currentUser = { ...prof };
-  STATE.isAuthenticated = true;
-  if (prof.role === 'admin') {
-    STATE.view = 'admin_overview';
-  } else if (prof.role === 'employee') {
-    STATE.view = 'emp_workspace';
-  } else {
-    STATE.view = 'dashboard';
-  }
-  recordLoginAudit(prof, 'Role Switcher / Session Auth');
-  saveState();
-  closeModal();
-  render();
-  toast(`Logged in as ${prof.title} (${prof.name})`);
-}
-window.switchRole = switchRole;
-
 async function signInWithGoogle() {
   if (_supabaseClient && _supabaseClient.auth) {
     toast('Redirecting to Google Sign-In...');
@@ -1941,7 +1906,7 @@ async function signInWithGoogle() {
     }
   } else {
     STATE.isAuthenticated = true;
-    const mgrProf = DEMO_PROFILES.find(p => p.role === 'manager') || DEMO_PROFILES[1];
+    const mgrProf = (STATE.allUsers || []).find(p => p.role === 'manager') || DEMO_PROFILES[1];
     STATE.currentUser = { ...mgrProf };
     STATE.view = 'dashboard';
     recordLoginAudit(mgrProf, 'Google OAuth 2.0 (Verified)');
@@ -1957,59 +1922,52 @@ function openAuthModal() {
   showModal(`
     <div class="modal-header">
       <div>
-        <h3 class="modal-title">🔐 Portal Access & Role Switcher</h3>
-        <div style="font-size:12px; color:var(--text-muted);">Switch between Platform Super Admin, Agency Manager, and Employee Workspace</div>
+        <h3 class="modal-title">🔐 Active Security Session & Profile</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Verified user credentials and multi-tenant authorization details</div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
     <!-- Active Profile Card -->
-    <div style="padding:14px 16px; background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:10px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="font-size:32px;">${curr.avatar || '👤'}</div>
+    <div style="padding:16px 18px; background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; margin-bottom:20px;">
+      <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+        <div style="font-size:38px;">${curr.avatar || '👤'}</div>
         <div>
-          <div style="font-weight:800; font-size:15px; color:var(--text-primary);">${esc(curr.name)}</div>
-          <div style="font-size:12px; color:var(--text-secondary);">${esc(curr.email)} · <span class="pill ${curr.role === 'admin' ? 'pill-purple' : curr.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:10px; text-transform:uppercase;">${curr.role}</span></div>
+          <div style="font-weight:800; font-size:16px; color:var(--text-primary);">${esc(curr.name)}</div>
+          <div style="font-size:12.5px; color:var(--text-secondary);"><span class="mono">${esc(curr.email)}</span></div>
+          <div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
+            <span class="pill ${curr.role === 'admin' ? 'pill-purple' : curr.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:10px; font-weight:700; text-transform:uppercase;">
+              Authorized: ${curr.role}
+            </span>
+            <span class="pill pill-green" style="font-size:10px;">✓ Session Active</span>
+          </div>
         </div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="logoutGateway(); closeModal();" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">
-        🚪 Sign Out
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; border-top:1px solid var(--border-subtle); padding-top:12px;">
+        <div>
+          <div style="color:var(--text-muted); font-size:11px;">Agency Workspace</div>
+          <div style="font-weight:700; color:var(--text-primary);">${esc(curr.companyName || STATE.settings.agencyName || 'Primary Workspace')}</div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted); font-size:11px;">Subscription Tier</div>
+          <div style="font-weight:700; color:var(--signal-cash);">${esc(curr.plan || '1 Year Plan')}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Security Notice -->
+    <div style="padding:12px 14px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:8px; margin-bottom:20px; font-size:12px; color:var(--text-secondary); line-height:1.5;">
+      <b style="color:var(--brand);">🛡️ Authorization Enforcement Active:</b> Instant role switching has been disabled. To access another portal identity, sign out and authenticate via Email ID & Password with 2-time verification.
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; gap:10px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeModal(); logoutGateway();" style="color:#ffffff; background:var(--accent-rose); border-color:var(--accent-rose); font-weight:700;">
+        🚪 Sign Out & Switch Account ➔
       </button>
     </div>
-
-    <!-- Google OAuth Direct Sign-In Button -->
-    <button class="btn" id="modalGoogleAuthBtn" style="width:100%; background:#ffffff; color:#1f2937; border:1px solid #d1d5db; font-weight:700; font-size:13.5px; padding:10px 16px; margin-bottom:20px; box-shadow:0 2px 6px rgba(0,0,0,0.08); display:flex; align-items:center; justify-content:center; gap:10px; border-radius:8px;">
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
-        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-      </svg>
-      Sign in with Google Account
-    </button>
-
-    <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; letter-spacing:0.5px;">⚡ Instant 1-Click Role Switcher</div>
-
-    <div style="display:flex; flex-direction:column; gap:8px;">
-      ${DEMO_PROFILES.map(p => `
-        <div style="padding:12px 14px; background:var(--bg-card); border:1px solid ${curr.id === p.id ? 'var(--brand)' : 'var(--border-subtle)'}; border-radius:8px; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="switchRole('${p.id}')">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:24px;">${p.avatar}</span>
-            <div>
-              <div style="font-weight:700; font-size:13px; color:var(--text-primary);">${esc(p.name)}</div>
-              <div style="font-size:11.5px; color:var(--text-secondary);">${esc(p.title)} · <span class="mono">${esc(p.email)}</span></div>
-            </div>
-          </div>
-          <button class="btn btn-sm ${curr.id === p.id ? 'btn-primary' : 'btn-ghost'}">
-            ${curr.id === p.id ? 'Active' : 'Switch ➔'}
-          </button>
-        </div>
-      `).join('')}
-    </div>
   `, 540);
-
-  const gBtn = document.getElementById('modalGoogleAuthBtn');
-  if (gBtn) gBtn.onclick = signInWithGoogle;
 }
 window.openAuthModal = openAuthModal;
 
@@ -2028,7 +1986,7 @@ function renderAdminOverviewView() {
       </div>
       <div style="display:flex; gap:8px;">
         <button class="btn btn-signal" onclick="STATE.view='admin_reengage'; renderMain();">✉️ Re-Engage Inactive Users (${inactiveUsers.length})</button>
-        <button class="btn btn-ghost" onclick="openAuthModal()">Switch Portal Role</button>
+        <button class="btn btn-ghost" onclick="openAuthModal()">👤 Active Session</button>
       </div>
     </div>
 
@@ -2707,7 +2665,7 @@ function renderEmpWorkspaceView() {
         <button class="btn ${todayAtt ? 'btn-ghost' : 'btn-signal'}" onclick="empPunchToday('Present')">
           ${todayAtt ? `✓ Punched: ${todayAtt.status} (${todayAtt.checkIn || '09:30 AM'})` : '🕒 Clock In Today'}
         </button>
-        <button class="btn btn-ghost" onclick="openAuthModal()">Switch Profile</button>
+        <button class="btn btn-ghost" onclick="logoutGateway()" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">🚪 Sign Out</button>
       </div>
     </div>
 

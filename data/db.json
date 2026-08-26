@@ -3,22 +3,22 @@
     {
       "id": "comp_1",
       "name": "AccountiX Media HQ",
-      "plan": "1 Year Plan",
+      "plan": "Enterprise Suite",
       "status": "Active",
       "ownerEmail": "jeet@accountix.agency",
       "createdAt": "2026-01-15",
       "usersCount": 8,
-      "mrr": 999
+      "mrr": 14999
     },
     {
       "id": "comp_2",
       "name": "UrbanFit Digital Agency",
-      "plan": "6 Months Plan",
+      "plan": "Pro Agency",
       "status": "Active",
       "ownerEmail": "dr.nikhil@urbanfit.io",
       "createdAt": "2026-02-01",
       "usersCount": 5,
-      "mrr": 589
+      "mrr": 7999
     },
     {
       "id": "comp_3",
@@ -33,22 +33,22 @@
     {
       "id": "comp_4",
       "name": "Starlight Performance Labs",
-      "plan": "1 Month Plan",
+      "plan": "Pro Agency",
       "status": "Active",
       "ownerEmail": "simran@starlightlabs.co",
       "createdAt": "2026-02-14",
       "usersCount": 6,
-      "mrr": 119
+      "mrr": 7999
     },
     {
       "id": "comp_5",
       "name": "BrandScale India",
-      "plan": "6 Months Plan",
+      "plan": "Pro Agency",
       "status": "Inactive",
       "ownerEmail": "vikas@brandscale.in",
       "createdAt": "2026-02-05",
       "usersCount": 3,
-      "mrr": 589
+      "mrr": 7999
     }
   ],
   "allUsers": [
@@ -87,7 +87,7 @@
       "staffId": "st_2",
       "companyId": "comp_1",
       "companyName": "AccountiX Media HQ",
-      "lastActiveAt": "2026-08-26T09:27:26.445Z",
+      "lastActiveAt": "2026-08-26T09:38:04.398Z",
       "status": "Active",
       "purchasedDate": "2026-01-15",
       "plan": "Enterprise Suite"
@@ -160,6 +160,18 @@
     }
   ],
   "loginLogs": [
+    {
+      "id": "log_1787737084399_qrqu",
+      "userId": "usr_rohan",
+      "userName": "Rohan Mehta",
+      "userEmail": "rohan@accountix.agency",
+      "role": "employee",
+      "companyName": "AccountiX Media HQ",
+      "loginTime": "26 Aug 2026, 03:08:04 pm",
+      "authMethod": "Email & Password (Verified)",
+      "status": "Success (Verified)",
+      "device": "Desktop Workstation"
+    },
     {
       "id": "log_1787736473021_46yv",
       "userId": "usr_admin",
@@ -429,7 +441,7 @@
       "staffId": "st_2",
       "date": "2026-08-26",
       "status": "Present",
-      "checkIn": "10:05 AM"
+      "checkIn": "03:08 PM"
     },
     {
       "id": "att_3",
@@ -575,17 +587,18 @@
   },
   "isAuthenticated": true,
   "currentUser": {
-    "id": "usr_admin",
-    "name": "Platform Admin",
-    "email": "admin@accountix.agency",
-    "password": "admin@123",
-    "role": "admin",
+    "id": "usr_rohan",
+    "name": "Rohan Mehta",
+    "email": "rohan@accountix.agency",
+    "password": "staff@123",
+    "role": "employee",
+    "staffId": "st_2",
     "companyId": "comp_1",
-    "companyName": "AccountiX Platform",
+    "companyName": "AccountiX Media HQ",
     "lastActiveAt": "2026-08-26T09:27:26.445Z",
     "status": "Active",
-    "purchasedDate": "2026-01-01",
-    "plan": "Enterprise"
+    "purchasedDate": "2026-01-15",
+    "plan": "Enterprise Suite"
   },
   "serviceCatalog": [
     {
@@ -652,7 +665,7 @@
       "description": "Creator sourcing, briefing, barter/paid outreach & campaign tracking"
     }
   ],
-  "view": "admin_overview",
+  "view": "emp_tasks",
   "_search": "",
   "_salesTab": "pipeline",
   "_workTab": "kanban",
