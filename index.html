@@ -222,9 +222,23 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
 .topbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 /* ================= EXECUTIVE PROFILE & ACTIONS DROPDOWN ================= */
+.dropdown-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(2px);
+  z-index: 140;
+  -webkit-tap-highlight-color: transparent;
+}
+.dropdown-backdrop.show {
+  display: block;
+}
+
 .profile-dropdown-wrapper {
   position: relative;
   display: inline-block;
+  z-index: 145;
 }
 .profile-trigger {
   display: inline-flex;
@@ -240,6 +254,7 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
   font-weight: 700;
   transition: all 0.15s ease;
   user-select: none;
+  touch-action: manipulation;
 }
 .profile-trigger:hover, .profile-trigger.active {
   background: var(--bg-elevated);
@@ -275,6 +290,19 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
 }
 .dropdown-menu.show {
   display: flex;
+}
+
+@media (max-width: 640px) {
+  .dropdown-menu {
+    position: fixed !important;
+    top: 56px !important;
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-width: 340px !important;
+    margin-left: auto !important;
+    z-index: 99999 !important;
+  }
 }
 
 @keyframes dropdownFadeIn {
@@ -1488,6 +1516,9 @@ function render() {
             🔔 ${urgentCount > 0 ? `<span class="notif-dot">${urgentCount}</span>` : ''}
           </button>
 
+          <!-- 1-Tap Backdrop Overlay to dismiss dropdown on mobile & desktop -->
+          <div class="dropdown-backdrop" id="dropdownBackdrop" onclick="closeDropdownMenu()"></div>
+
           <!-- 👤 Profile & Actions Dropdown Menu -->
           <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
             <button class="profile-trigger" id="topbarProfileTrigger" title="Account Menu, Settings, Rate Card & Sign Out">
@@ -1596,19 +1627,8 @@ function render() {
   document.getElementById('mobileFabBtn').onclick = user.role === 'employee' ? () => empPunchToday('Present') : openQuickAddModal;
 
   const profTrigger = document.getElementById('topbarProfileTrigger');
-  const profDropdown = document.getElementById('topbarDropdownMenu');
-  if (profTrigger && profDropdown) {
-    profTrigger.onclick = (e) => {
-      e.stopPropagation();
-      const isOpen = profDropdown.classList.contains('show');
-      if (isOpen) {
-        profDropdown.classList.remove('show');
-        profTrigger.classList.remove('active');
-      } else {
-        profDropdown.classList.add('show');
-        profTrigger.classList.add('active');
-      }
-    };
+  if (profTrigger) {
+    profTrigger.onclick = (e) => toggleDropdownMenu(e);
   }
   const sbBadge = document.getElementById('topbarSupabaseBadge');
   if (sbBadge) {
@@ -5740,19 +5760,51 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+function openDropdownMenu() {
+  const menu = document.getElementById('topbarDropdownMenu');
+  const trigger = document.getElementById('topbarProfileTrigger');
+  const backdrop = document.getElementById('dropdownBackdrop');
+  if (menu) menu.classList.add('show');
+  if (trigger) trigger.classList.add('active');
+  if (backdrop) backdrop.classList.add('show');
+}
+window.openDropdownMenu = openDropdownMenu;
+
 function closeDropdownMenu() {
   const menu = document.getElementById('topbarDropdownMenu');
   const trigger = document.getElementById('topbarProfileTrigger');
+  const backdrop = document.getElementById('dropdownBackdrop');
   if (menu) menu.classList.remove('show');
   if (trigger) trigger.classList.remove('active');
+  if (backdrop) backdrop.classList.remove('show');
 }
 window.closeDropdownMenu = closeDropdownMenu;
 
-document.addEventListener('click', (e) => {
-  const wrapper = document.getElementById('profileDropdownWrapper');
-  if (wrapper && !wrapper.contains(e.target)) {
-    closeDropdownMenu();
+function toggleDropdownMenu(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
   }
+  const menu = document.getElementById('topbarDropdownMenu');
+  if (menu && menu.classList.contains('show')) {
+    closeDropdownMenu();
+  } else {
+    openDropdownMenu();
+  }
+}
+window.toggleDropdownMenu = toggleDropdownMenu;
+
+['click', 'touchstart', 'pointerdown'].forEach(evt => {
+  document.addEventListener(evt, (e) => {
+    const menu = document.getElementById('topbarDropdownMenu');
+    const trigger = document.getElementById('topbarProfileTrigger');
+    if (menu && menu.classList.contains('show')) {
+      if (trigger && trigger.contains(e.target)) return;
+      if (!menu.contains(e.target)) {
+        closeDropdownMenu();
+      }
+    }
+  }, { passive: true });
 });
 
 loadState();

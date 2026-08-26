@@ -268,10 +268,20 @@ button:active, .btn:active {
     padding: 6px 10px !important;
   }
 
+  .dropdown-backdrop {
+    z-index: 99990 !important;
+  }
+
   .dropdown-menu {
-    width: 290px;
-    max-width: calc(100vw - 16px);
-    right: -4px;
+    position: fixed !important;
+    top: 54px !important;
+    right: 8px !important;
+    left: 8px !important;
+    width: auto !important;
+    max-width: 340px !important;
+    margin-left: auto !important;
+    z-index: 99999 !important;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-card) !important;
   }
 }
 
