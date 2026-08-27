@@ -3886,7 +3886,7 @@ function renderClientsList(clients) {
   return `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Client / Business</th><th>Active Scope</th><th>Assigned Lead</th><th>Total Billed</th><th>Collected</th><th>Pending Dues</th><th>Renewal Date</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Client / Business</th><th>Active Scope</th><th>Assigned Lead</th><th>Total Billed</th><th>Collected</th><th>Pending Dues</th><th>Renewal Date</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
         <tbody>
           ${clients.map(c => {
             const pkg = activePackage(c.id);
@@ -3901,7 +3901,12 @@ function renderClientsList(clients) {
               <td class="mono" style="color:${out.pending > 0 ? 'var(--accent-rose)' : 'var(--text-muted)'}; font-weight:${out.pending > 0 ? '700' : 'normal'};">${fmtMoney(out.pending)}</td>
               <td>${pkg ? fmtDate(pkg.endDate) : '—'}</td>
               <td><span class="pill ${c.status === 'Inactive' ? 'pill-gray' : 'pill-green'}">${c.status || 'Active'}</span></td>
-              <td style="text-align:right;"><button class="btn btn-ghost btn-sm" data-open-client="${c.id}">Ledger</button></td>
+              <td style="text-align:right;">
+                <div style="display:inline-flex; gap:6px;">
+                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditClientModal('${c.id}')" title="Edit All Client Information">✏️ Edit</button>
+                  <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openClientProfileModal('${c.id}')">Ledger</button>
+                </div>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -4138,6 +4143,342 @@ function openNewClientModal(prefill = {}) {
   };
 }
 
+/* ================= EDIT ALL CLIENT DETAILS MODAL ================= */
+function openEditClientModal(clientId) {
+  const c = STATE.clients.find(cl => cl.id === clientId);
+  if (!c) return;
+
+  const catalog = getServiceCatalog();
+  const pkg = activePackage(clientId) || (STATE.packages.find(p => p.clientId === clientId)) || {
+    id: uid('pkg'),
+    serviceType: catalog[0].name,
+    amount: catalog[0].defaultAmount,
+    startDate: todayStr(),
+    endDate: addMonths(todayStr(), 1),
+    assignedStaffId: '',
+    status: 'Active'
+  };
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">✏️ Edit Client & Contract Details</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Update all profile, contact, pricing, dates, and specialist assignments for ${esc(c.name)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field">
+      <label>Client / Contact Person Name *</label>
+      <input id="f_edit_cl_name" value="${esc(c.name || '')}" placeholder="e.g. Dr. Nikhil Parekh" required autofocus />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Company / Brand Name</label>
+        <input id="f_edit_cl_company" value="${esc(c.company || '')}" placeholder="e.g. Apex Dental Clinic" />
+      </div>
+      <div class="field">
+        <label>Mobile Number</label>
+        <input id="f_edit_cl_mobile" value="${esc(c.mobile || '')}" placeholder="+91 98980 11223" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>WhatsApp Number</label>
+        <input id="f_edit_cl_wa" value="${esc(c.whatsapp || c.mobile || '')}" placeholder="+91 98980 11223" />
+      </div>
+      <div class="field">
+        <label>Instagram Handle</label>
+        <input id="f_edit_cl_insta" value="${esc(c.instagram || '')}" placeholder="@handle" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Account Status</label>
+        <select id="f_edit_cl_status">
+          <option value="Active" ${c.status === 'Active' ? 'selected' : ''}>Active Account</option>
+          <option value="Inactive" ${c.status === 'Inactive' ? 'selected' : ''}>Inactive / Churned</option>
+          <option value="On Hold" ${c.status === 'On Hold' ? 'selected' : ''}>On Hold / Paused</option>
+          <option value="Completed" ${c.status === 'Completed' ? 'selected' : ''}>Completed / Closed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Assigned Lead / Specialist</label>
+        <select id="f_edit_cl_staff">
+          <option value="">— None / Unassigned —</option>
+          ${STATE.staff.map(s => `<option value="${s.id}" ${pkg.assignedStaffId === s.id ? 'selected' : ''}>${esc(s.name)} (${esc(s.role)})</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+      <div style="font-size:12px; font-weight:700; color:var(--brand); text-transform:uppercase; margin-bottom:10px;">
+        📦 Contracted Package & Retainer Pricing
+      </div>
+
+      <div class="field">
+        <label>Active Service Package</label>
+        <select id="f_edit_cl_service">
+          ${catalog.map(s => `<option value="${esc(s.name)}" data-price="${s.defaultAmount}" ${pkg.serviceType === s.name ? 'selected' : ''}>${esc(s.name)} (${fmtMoney(s.defaultAmount)})</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Contract Start Date</label>
+          <input type="date" id="f_edit_cl_start" value="${pkg.startDate || todayStr()}" />
+        </div>
+        <div class="field">
+          <label>Renewal / Expiry Date</label>
+          <input type="date" id="f_edit_cl_end" value="${pkg.endDate || addMonths(todayStr(), 1)}" />
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Retainer Package Amount (₹)</label>
+          <input type="number" id="f_edit_cl_amount" value="${pkg.amount || 0}" />
+        </div>
+        <div class="field">
+          <label>Package Status</label>
+          <select id="f_edit_pkg_status">
+            <option value="Active" ${pkg.status === 'Active' ? 'selected' : ''}>Active</option>
+            <option value="Expired" ${pkg.status === 'Expired' ? 'selected' : ''}>Expired</option>
+            <option value="Cancelled" ${pkg.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Client Specific Notes & Preferences</label>
+      <textarea id="f_edit_cl_notes" rows="2" placeholder="e.g. Preferred posting times, brand aesthetics, custom contract requirements...">${esc(c.notes || '')}</textarea>
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center;">
+      <button class="btn btn-danger-ghost btn-sm" id="btnDeleteClient">🗑️ Delete Client</button>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveClientDetails" style="font-weight:700;">Save All Changes ➔</button>
+      </div>
+    </div>
+  `, 580);
+
+  const servSel = document.getElementById('f_edit_cl_service');
+  if (servSel) {
+    servSel.onchange = () => {
+      const selected = servSel.options[servSel.selectedIndex];
+      const pr = selected.dataset.price;
+      if (pr) document.getElementById('f_edit_cl_amount').value = pr;
+    };
+  }
+
+  document.getElementById('btnSaveClientDetails').onclick = () => {
+    const name = document.getElementById('f_edit_cl_name').value.trim();
+    if (!name) { toast('Client name is required'); return; }
+
+    c.name = name;
+    c.company = document.getElementById('f_edit_cl_company').value.trim();
+    c.mobile = document.getElementById('f_edit_cl_mobile').value.trim();
+    c.whatsapp = document.getElementById('f_edit_cl_wa').value.trim();
+    c.instagram = document.getElementById('f_edit_cl_insta').value.trim();
+    c.status = document.getElementById('f_edit_cl_status').value;
+    c.notes = document.getElementById('f_edit_cl_notes').value.trim();
+
+    const serviceType = document.getElementById('f_edit_cl_service').value;
+    const amount = Number(document.getElementById('f_edit_cl_amount').value) || 0;
+    const startDate = document.getElementById('f_edit_cl_start').value;
+    const endDate = document.getElementById('f_edit_cl_end').value;
+    const assignedStaffId = document.getElementById('f_edit_cl_staff').value;
+    const pkgStatus = document.getElementById('f_edit_pkg_status').value;
+
+    let targetPkg = STATE.packages.find(p => p.id === pkg.id);
+    if (targetPkg) {
+      targetPkg.serviceType = serviceType;
+      targetPkg.amount = amount;
+      targetPkg.startDate = startDate;
+      targetPkg.endDate = endDate;
+      targetPkg.assignedStaffId = assignedStaffId;
+      targetPkg.status = pkgStatus;
+    } else {
+      STATE.packages.push({
+        id: pkg.id || uid('pkg'),
+        clientId: c.id,
+        serviceType,
+        amount,
+        startDate,
+        endDate,
+        assignedStaffId,
+        status: pkgStatus
+      });
+    }
+
+    saveState();
+    closeModal();
+    toast(`✓ Client details for "${c.name}" updated successfully!`);
+    render();
+  };
+
+  document.getElementById('btnDeleteClient').onclick = () => {
+    if (confirm(`Are you sure you want to delete client "${c.name}" and all associated packages? This action cannot be undone.`)) {
+      STATE.clients = STATE.clients.filter(cl => cl.id !== clientId);
+      STATE.packages = STATE.packages.filter(p => p.clientId !== clientId);
+      saveState();
+      closeModal();
+      toast(`Client "${c.name}" removed.`);
+      render();
+    }
+  };
+}
+window.openEditClientModal = openEditClientModal;
+
+/* ================= MULTI-LANGUAGE MESSAGE & RECEIPT GENERATOR ================= */
+const MULTI_LANG_TRANSLATIONS = {
+  receipt: {
+    en: { name: 'English (🇬🇧)', gen: (c, p, out, a) => `Hi ${c.name},\n\nThank you for your payment of *${fmtMoney(p.amount)}* received on ${fmtDate(p.date)} via ${p.mode || 'Online'}.\n${out > 0 ? `Remaining balance: *${fmtMoney(out)}*.\n\n` : `Your account is fully settled. Thank you for partnering with us!\n\n`}Warm regards,\n*${a}*` },
+    hi: { name: 'Hindi (हिंदी)', gen: (c, p, out, a) => `नमस्ते ${c.name},\n\n*${a}* की ओर से धन्यवाद। हमें ${fmtDate(p.date)} को ${p.mode || 'ऑनलाइन'} के माध्यम से *${fmtMoney(p.amount)}* का भुगतान प्राप्त हुआ है।\n${out > 0 ? `शेष बकाया राशि: *${fmtMoney(out)}*।\n\n` : `आपका खाता पूर्ण रूप से चुकता हो चुका है। हमारे साथ काम करने के लिए धन्यवाद!\n\n`}सादर,\n*${a}*` },
+    gu: { name: 'Gujarati (ગુજરાતી)', gen: (c, p, out, a) => `નમસ્તે ${c.name},\n\n*${a}* તરફથી આભાર. અમને ${fmtDate(p.date)} ના રોજ ${p.mode || 'ઓનલાઇન'} દ્વારા *${fmtMoney(p.amount)}* ની ચૂકવણી પ્રાપ્ત થઈ છે.\n${out > 0 ? `બાકી રકમ: *${fmtMoney(out)}*.\n\n` : `તમારું એકાઉન્ટ સંપૂર્ણપણે ચૂકવાઈ ગયું છે. અમારી સાથે જોડાવા બદલ આભાર!\n\n`}શુભેચ્છાઓ,\n*${a}*` },
+    hinglish: { name: 'Hinglish', gen: (c, p, out, a) => `Hi ${c.name},\n\n*${a}* ki taraf se payment receive ho gaya hai! ${fmtDate(p.date)} ko ${p.mode || 'Online'} ke through *${fmtMoney(p.amount)}* prapt hua.\n${out > 0 ? `Remaining balance: *${fmtMoney(out)}* hai.\n\n` : `Aapka account fully clear hai. Thank you for working with us!\n\n`}Warm regards,\n*${a}*` },
+    es: { name: 'Spanish (Español)', gen: (c, p, out, a) => `Hola ${c.name},\n\nGracias por su pago de *${fmtMoney(p.amount)}* recibido el ${fmtDate(p.date)} a través de ${p.mode || 'Pago en línea'}.\n${out > 0 ? `Saldo restante: *${fmtMoney(out)}*.\n\n` : `Su cuenta está completamente al día. ¡Gracias por confiar en nosotros!\n\n`}Saludos cordiales,\n*${a}*` },
+    fr: { name: 'French (Français)', gen: (c, p, out, a) => `Bonjour ${c.name},\n\nMerci pour votre paiement de *${fmtMoney(p.amount)}* reçu le ${fmtDate(p.date)} via ${p.mode || 'En ligne'}.\n${out > 0 ? `Solde restant: *${fmtMoney(out)}*.\n\n` : `Votre compte est entièrement réglé. Merci pour votre confiance!\n\n`}Cordialement,\n*${a}*` },
+    ar: { name: 'Arabic (العربية)', gen: (c, p, out, a) => `مرحبًا ${c.name}،\n\nشكرًا لك على دفعتك بقيمة *${fmtMoney(p.amount)}* المستلمة بتاريخ ${fmtDate(p.date)}.\n${out > 0 ? `المبلغ المتبقي: *${fmtMoney(out)}*.\n\n` : `تم تسوية حسابك بالكامل. شكرًا لتعاملك معنا!\n\n`}مع أطيب التحيات،\n*${a}*` }
+  },
+  reminder: {
+    en: { name: 'English (🇬🇧)', gen: (c, p, out, a, pkg) => `Hi ${c.name},\n\nThis is a friendly payment reminder from *${a}*.\n\nAn outstanding balance of *${fmtMoney(out)}* is currently pending on your account${pkg && pkg.endDate ? ` (Package period: ${fmtDate(pkg.startDate)} → ${fmtDate(pkg.endDate)})` : ''}.\n\nKindly process this payment at your earliest convenience.\n\nThank you,\n*${a}*` },
+    hi: { name: 'Hindi (हिंदी)', gen: (c, p, out, a, pkg) => `नमस्ते ${c.name},\n\n*${a}* की ओर से यह एक विनम्र भुगतान अनुस्मारक (Payment Reminder) है।\n\nआपके खाते में *${fmtMoney(out)}* की बकाया राशि लंबित है${pkg && pkg.endDate ? ` (पैकेज अवधि: ${fmtDate(pkg.startDate)} → ${fmtDate(pkg.endDate)})` : ''}।\n\nकृपया जल्द से जल्द इस भुगतान को पूर्ण करें ताकि सेवा बिना किसी रुकावट के जारी रहे।\n\nधन्यवाद,\n*${a}*` },
+    gu: { name: 'Gujarati (ગુજરાતી)', gen: (c, p, out, a, pkg) => `નમસ્તે ${c.name},\n\n*${a}* તરફથી નમ્ર પેમેન્ટ રિમાઇન્ડર.\n\nતમારા ખાતા પર *${fmtMoney(out)}* ની રકમ ચૂકવવાની બાકી છે${pkg && pkg.endDate ? ` (સમયગાળો: ${fmtDate(pkg.startDate)} થી ${fmtDate(pkg.endDate)})` : ''}.\n\nસેવાઓ અવિરત ચાલુ રાખવા માટે કૃપા કરીને વહેલી તકે પેમેન્ટ ક્લિયર કરવા વિનંતી.\n\nઆભાર,\n*${a}*` },
+    hinglish: { name: 'Hinglish', gen: (c, p, out, a, pkg) => `Hi ${c.name},\n\nYe *${a}* ki taraf se payment reminder hai.\n\nAapke account par *${fmtMoney(out)}* ka balance pending hai${pkg && pkg.endDate ? ` (Due Date: ${fmtDate(pkg.endDate)})` : ''}.\n\nServices bina kisi rukawat ke chalte rehne ke liye kripya karke payment clear kar dein.\n\nThank you,\n*${a}*` },
+    es: { name: 'Spanish (Español)', gen: (c, p, out, a, pkg) => `Hola ${c.name},\n\nEste es un recordatorio de pago amistoso de *${a}*.\n\nTiene un saldo pendiente de *${fmtMoney(out)}* en su cuenta${pkg && pkg.endDate ? ` (Vence: ${fmtDate(pkg.endDate)})` : ''}.\n\nLe solicitamos realizar el pago a la brevedad para continuar con los servicios.\n\n¡Muchas gracias!\n*${a}*` },
+    fr: { name: 'French (Français)', gen: (c, p, out, a, pkg) => `Bonjour ${c.name},\n\nCeci est un rappel amical de paiement de la part de *${a}*.\n\nUn solde de *${fmtMoney(out)}* est actuellement en attente sur votre compte${pkg && pkg.endDate ? ` (Période: ${fmtDate(pkg.startDate)} → ${fmtDate(pkg.endDate)})` : ''}.\n\nMerci de bien vouloir procéder au règlement dans les meilleurs délais.\n\nCordialement,\n*${a}*` },
+    ar: { name: 'Arabic (العربية)', gen: (c, p, out, a, pkg) => `مرحبًا ${c.name}،\n\nهذا تذكير ودي بدفع المستحقات من *${a}*.\n\nيوجد رصيد معلق قدره *${fmtMoney(out)}* على حسابك.\n\nيرجى التكرم بتسوية الدفعة في أقرب وقت ممكن.\n\nشكرًا لك،\n*${a}*` }
+  },
+  renewal: {
+    en: { name: 'English (🇬🇧)', gen: (c, p, out, a, pkg) => `Hi ${c.name},\n\nYour retainer package (*${pkg ? pkg.serviceType : 'Marketing Service'}*) with *${a}* is due for renewal on *${pkg ? fmtDate(pkg.endDate) : 'upcoming cycle'}*.\n\nRenewal Amount: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nPlease confirm payment to renew for the next billing cycle without any gap in delivery.\n\nThank you,\n*${a}*` },
+    hi: { name: 'Hindi (हिंदी)', gen: (c, p, out, a, pkg) => `नमस्ते ${c.name},\n\n*${a}* के साथ आपका पैकेज (*${pkg ? pkg.serviceType : 'मार्केटिंग सर्विस'}*) नवीनीकरण (Renewal) के लिए तैयार है (${pkg ? fmtDate(pkg.endDate) : ''})।\n\nनवीनीकरण राशि: *${fmtMoney(pkg ? pkg.amount : 0)}*।\n\nमार्केटिंग व कंटेंट डिलीवरी निरंतर जारी रखने हेतु कृपया नवीनीकरण की पुष्टि करें।\n\nधन्यवाद,\n*${a}*` },
+    gu: { name: 'Gujarati (ગુજરાતી)', gen: (c, p, out, a, pkg) => `નમસ્તે ${c.name},\n\n*${a}* સાથેનું તમારું પેકેજ (*${pkg ? pkg.serviceType : 'માર્કેટિંગ સર્વિસ'}*) રીન્યુઅલ માટે તૈયાર છે (${pkg ? fmtDate(pkg.endDate) : ''}).\n\nરીન્યુઅલ રકમ: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nકામગીરી કોઈપણ અડચણ વગર ચાલુ રાખવા માટે કૃપા કરીને રીન્યુઅલ કન્ફર્મ કરવા વિનંતી.\n\nઆભાર,\n*${a}*` },
+    hinglish: { name: 'Hinglish', gen: (c, p, out, a, pkg) => `Hi ${c.name},\n\nAapka package (*${pkg ? pkg.serviceType : 'Marketing Service'}*) *${a}* ke saath renew hone wala hai (${pkg ? fmtDate(pkg.endDate) : ''}).\n\nRenewal Amount: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nServices continue rakhne ke liye payment confirm karein.\n\nThank you,\n*${a}*` },
+    es: { name: 'Spanish (Español)', gen: (c, p, out, a, pkg) => `Hola ${c.name},\n\nSu paquete (*${pkg ? pkg.serviceType : 'Servicio de Marketing'}*) con *${a}* vence el ${pkg ? fmtDate(pkg.endDate) : ''}.\n\nMonto de renovación: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nPor favor confirme su pago para renovar sin interrupciones.\n\n¡Gracias!\n*${a}*` },
+    fr: { name: 'French (Français)', gen: (c, p, out, a, pkg) => `Bonjour ${c.name},\n\nVotre forfait (*${pkg ? pkg.serviceType : 'Service Marketing'}*) chez *${a}* arrive à échéance le ${pkg ? fmtDate(pkg.endDate) : ''}.\n\nMontant du renouvellement: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nMerci de confirmer votre règlement pour renouveler le service.\n\nCordialement,\n*${a}*` },
+    ar: { name: 'Arabic (العربية)', gen: (c, p, out, a, pkg) => `مرحبًا ${c.name}،\n\nحزمة خدماتك مع *${a}* مستحقة للتجديد بتاريخ ${pkg ? fmtDate(pkg.endDate) : ''}.\n\nمبلغ التجديد: *${fmtMoney(pkg ? pkg.amount : 0)}*.\n\nيرجى تأكيد الدفع لتجديد الخدمة دون أي انقطاع.\n\nشكرًا لك،\n*${a}*` }
+  }
+};
+
+function openMultiLangMessageModal(type = 'reminder', clientId, paymentId = null) {
+  const c = STATE.clients.find(cl => cl.id === clientId);
+  if (!c) return;
+
+  const pkg = activePackage(clientId);
+  const out = clientOutstanding(clientId);
+  const payment = paymentId ? STATE.payments.find(p => p.id === paymentId) : (STATE.payments.filter(p => p.clientId === clientId)[0] || { amount: 0, date: todayStr(), mode: 'UPI' });
+  const agencyName = (STATE.settings && STATE.settings.agencyName) || 'AccountiX';
+
+  let selectedLang = 'en';
+
+  function getGeneratedMessage(langKey) {
+    const group = MULTI_LANG_TRANSLATIONS[type] || MULTI_LANG_TRANSLATIONS.reminder;
+    const entry = group[langKey] || group.en;
+    return entry.gen(c, payment, out.pending, agencyName, pkg);
+  }
+
+  const titleMap = {
+    receipt: `🧾 Payment Receipt (${fmtMoney(payment.amount)})`,
+    reminder: `⏰ Payment Due Reminder (${fmtMoney(out.pending)})`,
+    renewal: `🔄 Package Renewal Notice`
+  };
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">${titleMap[type] || 'Send Client Message'}</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Choose target language to automatically generate personalized client message for ${esc(c.name)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Language Selector Bar -->
+    <div style="margin-bottom:14px;">
+      <label style="font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+        🌐 Select Message Language
+      </label>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;" id="langBtnContainer">
+        ${Object.keys(MULTI_LANG_TRANSLATIONS[type] || {}).map(k => `
+          <button type="button" class="btn btn-sm ${k === selectedLang ? 'btn-primary' : 'btn-ghost'}" data-lang-key="${k}" style="font-size:12px; padding:5px 10px;">
+            ${MULTI_LANG_TRANSLATIONS[type][k].name}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Live Generated Message Box -->
+    <div class="field" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin-bottom:0;">Generated Message Preview</label>
+        <span style="font-size:11px; color:var(--text-muted);">Editable before sending</span>
+      </div>
+      <textarea id="multiLangMsgText" rows="7" style="font-size:13.5px; font-family:inherit; line-height:1.5; padding:12px; background:var(--bg-subtle);">${esc(getGeneratedMessage(selectedLang))}</textarea>
+    </div>
+
+    <!-- Recipient Info -->
+    <div style="padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:9px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+      <div>
+        <span style="color:var(--text-muted);">Recipient:</span> <b>${esc(c.name)}</b> (${esc(c.company || 'Client')})
+      </div>
+      <div class="mono" style="color:var(--brand); font-weight:700;">
+        💬 ${esc(c.whatsapp || c.mobile || 'No phone set')}
+      </div>
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <button class="btn btn-ghost" id="btnCopyMultiLangMsg">📋 Copy Message</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="wa-btn" id="btnSendMultiLangWa" style="font-weight:700; padding:8px 16px;">
+          <span>💬</span> Send via WhatsApp ➔
+        </button>
+      </div>
+    </div>
+  `, 560);
+
+  const container = document.getElementById('langBtnContainer');
+  if (container) {
+    container.querySelectorAll('[data-lang-key]').forEach(btn => {
+      btn.onclick = () => {
+        selectedLang = btn.dataset.langKey;
+        container.querySelectorAll('[data-lang-key]').forEach(b => {
+          b.className = `btn btn-sm ${b.dataset.langKey === selectedLang ? 'btn-primary' : 'btn-ghost'}`;
+        });
+        const msgEl = document.getElementById('multiLangMsgText');
+        if (msgEl) msgEl.value = getGeneratedMessage(selectedLang);
+      };
+    });
+  }
+
+  const copyBtn = document.getElementById('btnCopyMultiLangMsg');
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      const msgEl = document.getElementById('multiLangMsgText');
+      if (msgEl) {
+        navigator.clipboard.writeText(msgEl.value).then(() => {
+          toast('✓ Message copied to clipboard!');
+        });
+      }
+    };
+  }
+
+  const waBtn = document.getElementById('btnSendMultiLangWa');
+  if (waBtn) {
+    waBtn.onclick = () => {
+      const msgEl = document.getElementById('multiLangMsgText');
+      const text = msgEl ? msgEl.value : getGeneratedMessage(selectedLang);
+      sendWa(c.whatsapp || c.mobile, text);
+    };
+  }
+}
+window.openMultiLangMessageModal = openMultiLangMessageModal;
+
 function openClientProfileModal(clientId) {
   const c = STATE.clients.find(c => c.id === clientId);
   if (!c) return;
@@ -4146,9 +4487,15 @@ function openClientProfileModal(clientId) {
   const out = clientOutstanding(clientId);
 
   showModal(`
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px;">
-      <div><h2 style="font-size:20px; font-weight:800; color:var(--text-primary);">${esc(c.name)}</h2><div style="font-size:13px; color:var(--text-muted);">${esc(c.company || '')} ${c.mobile ? `· 📞 ${c.mobile}` : ''} ${c.instagram ? `· 📸 ${c.instagram}` : ''}</div></div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h2 style="font-size:20px; font-weight:800; color:var(--text-primary);">${esc(c.name)}</h2>
+        <div style="font-size:13px; color:var(--text-muted);">${esc(c.company || '')} ${c.mobile ? `· 📞 ${c.mobile}` : ''} ${c.whatsapp ? `· 💬 ${c.whatsapp}` : ''} ${c.instagram ? `· 📸 ${c.instagram}` : ''}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn btn-primary btn-sm" id="cpEditDetailsBtn" style="font-weight:700;">✏️ Edit All Details</button>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
     </div>
     <div class="grid grid-3" style="margin-bottom:16px;">
       <div class="card" style="padding:14px 16px;"><div class="stat-label">Total Billed</div><div class="stat-value small">${fmtMoney(out.total)}</div></div>
@@ -4160,7 +4507,7 @@ function openClientProfileModal(clientId) {
       <button class="btn btn-primary btn-sm" id="cpRenewBtn">🔄 Renew / Add Packages</button>
       <button class="btn btn-ghost btn-sm" id="cpPrintInvBtn">🖨️ Tax Invoice</button>
       <button class="btn btn-ghost btn-sm" id="cpTaskBtn">+ Assign Task</button>
-      ${out.pending > 0 ? `<button class="wa-btn btn-sm" id="cpWaRemindBtn">WhatsApp Reminder (${fmtMoney(out.pending)})</button>` : ''}
+      ${out.pending > 0 ? `<button class="wa-btn btn-sm" id="cpWaRemindBtn">🌐 WhatsApp Reminder (${fmtMoney(out.pending)})</button>` : ''}
     </div>
     <div class="section-label" style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Packages & Retainers</div>
     <div class="table-wrap" style="margin-bottom:16px;">
@@ -4170,21 +4517,21 @@ function openClientProfileModal(clientId) {
     <div class="section-label" style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Payment History</div>
     <div class="table-wrap" style="margin-bottom:16px;">
       <table><thead><tr><th>Date</th><th>Mode</th><th>Amount</th><th>Receipt</th></tr></thead>
-      <tbody>${pays.map(p => `<tr><td>${fmtDate(p.date)}</td><td>${esc(p.mode || 'Cash')}</td><td class="mono" style="color:var(--signal-cash);">${fmtMoney(p.amount)}</td><td><button class="wa-btn btn-sm" data-wa-pay="${p.id}">WA Receipt</button></td></tr>`).join('') || `<tr><td colspan="4" class="empty">No payments received yet.</td></tr>`}</tbody></table>
+      <tbody>${pays.map(p => `<tr><td>${fmtDate(p.date)}</td><td>${esc(p.mode || 'Cash')}</td><td class="mono" style="color:var(--signal-cash);">${fmtMoney(p.amount)}</td><td><button class="wa-btn btn-sm" data-wa-pay="${p.id}">🌐 WA Receipt</button></td></tr>`).join('') || `<tr><td colspan="4" class="empty">No payments received yet.</td></tr>`}</tbody></table>
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
   `, 680);
 
+  document.getElementById('cpEditDetailsBtn').onclick = () => openEditClientModal(clientId);
   document.getElementById('cpAddPayBtn').onclick = () => openPaymentModal(clientId);
   document.getElementById('cpRenewBtn').onclick = () => openMultiRenewModal(clientId);
   document.getElementById('cpPrintInvBtn').onclick = () => openPrintInvoiceModal(clientId);
   document.getElementById('cpTaskBtn').onclick = () => openTaskModal(clientId);
   const wr = document.getElementById('cpWaRemindBtn');
-  if (wr) wr.onclick = () => sendWa(c.whatsapp || c.mobile, WA_TEMPLATES.outstanding(c.name, out.pending, null, STATE.settings.agencyName));
+  if (wr) wr.onclick = () => openMultiLangMessageModal('reminder', clientId);
   document.querySelectorAll('[data-wa-pay]').forEach(el => {
     el.onclick = () => {
-      const p = STATE.payments.find(p => p.id === el.dataset.waPay);
-      if (p) sendWa(c.whatsapp || c.mobile, WA_TEMPLATES.paymentThanks(c.name, p.amount, p.date, clientOutstanding(clientId).pending, STATE.settings.agencyName));
+      openMultiLangMessageModal('receipt', clientId, el.dataset.waPay);
     };
   });
 }
@@ -4344,8 +4691,7 @@ function renderMultiRenewModalContent(clientId) {
   const waBtn = document.getElementById('sendMultiRenewWaBtn');
   if (waBtn && client) {
     waBtn.onclick = () => {
-      const msg = WA_TEMPLATES.multiRenewal(client.name, activeRenewRows, totalRenewSum, earliestEnd, STATE.settings.agencyName);
-      sendWa(client.whatsapp || client.mobile, msg);
+      openMultiLangMessageModal('renewal', clientId);
     };
   }
 
@@ -5066,13 +5412,14 @@ function attachFinance() {
   document.querySelectorAll('[data-wa-rcpt]').forEach(el => {
     el.onclick = () => {
       const p = STATE.payments.find(p => p.id === el.dataset.waRcpt);
-      if (p) { const c = STATE.clients.find(cl => cl.id === p.clientId); if (c) sendWa(c.whatsapp || c.mobile, WA_TEMPLATES.paymentThanks(c.name, p.amount, p.date, clientOutstanding(c.id).pending, STATE.settings.agencyName)); }
+      if (p) {
+        openMultiLangMessageModal('receipt', p.clientId, p.id);
+      }
     };
   });
   document.querySelectorAll('[data-wa-rem-fin]').forEach(el => {
     el.onclick = () => {
-      const c = STATE.clients.find(cl => cl.id === el.dataset.waRemFin);
-      if (c) sendWa(c.whatsapp || c.mobile, WA_TEMPLATES.outstanding(c.name, clientOutstanding(c.id).pending, null, STATE.settings.agencyName));
+      openMultiLangMessageModal('reminder', el.dataset.waRemFin);
     };
   });
 }
@@ -5085,16 +5432,23 @@ function openPaymentModal(clientId = null) {
       <div class="field"><label>Amount (₹) *</label><input type="number" id="f_pm_am" placeholder="35000" autofocus required /></div>
       <div class="field"><label>Date</label><input type="date" id="f_pm_dt" value="${todayStr()}" /></div>
     </div>
-    <div class="field"><label>Mode</label><select id="f_pm_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select></div>
-    <div class="field"><label>Note</label><input id="f_pm_nt" placeholder="UPI Reference / Milestone" /></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-signal" id="savePmBtn">Record Payment</button></div>
-  `, 500);
+    <div class="field-row">
+      <div class="field"><label>Mode</label><select id="f_pm_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select></div>
+      <div class="field"><label>Payment Note / Ref</label><input id="f_pm_nt" placeholder="UPI Reference / Milestone" /></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-signal" id="savePmBtn">Record & Generate Receipt ➔</button></div>
+  `, 520);
   document.getElementById('savePmBtn').onclick = () => {
     const cid = clientId || document.getElementById('f_pm_cl').value;
     const am = Number(document.getElementById('f_pm_am').value);
     if (!am) { toast('Valid amount required'); return; }
-    STATE.payments.push({ id: uid('pay'), clientId: cid, amount: am, date: document.getElementById('f_pm_dt').value, mode: document.getElementById('f_pm_md').value, note: document.getElementById('f_pm_nt').value.trim() });
-    saveState(); closeModal(); toast(`Recorded ${fmtMoney(am)}`); render();
+    const payId = uid('pay');
+    STATE.payments.push({ id: payId, clientId: cid, amount: am, date: document.getElementById('f_pm_dt').value, mode: document.getElementById('f_pm_md').value, note: document.getElementById('f_pm_nt').value.trim() });
+    saveState();
+    closeModal();
+    toast(`✓ Recorded payment of ${fmtMoney(am)}`);
+    render();
+    openMultiLangMessageModal('receipt', cid, payId);
   };
 }
 
