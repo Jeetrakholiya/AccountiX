@@ -4144,6 +4144,100 @@ function openNewClientModal(prefill = {}) {
 }
 
 /* ================= EDIT ALL CLIENT DETAILS MODAL ================= */
+function deleteClientPaymentDirect(paymentId, clientId) {
+  const p = STATE.payments.find(pay => pay.id === paymentId);
+  if (p && confirm(`Remove this payment record of ${fmtMoney(p.amount)}?`)) {
+    STATE.payments = STATE.payments.filter(pay => pay.id !== paymentId);
+    saveState();
+    toast(`✓ Payment record of ${fmtMoney(p.amount)} removed`);
+    render();
+    openEditClientModal(clientId);
+  }
+}
+window.deleteClientPaymentDirect = deleteClientPaymentDirect;
+
+function openEditPaymentModal(paymentId) {
+  const p = STATE.payments.find(pay => pay.id === paymentId);
+  if (!p) return;
+  const c = STATE.clients.find(cl => cl.id === p.clientId) || { name: 'Client' };
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">✏️ Edit Payment Record</h3>
+        <div style="font-size:12px; color:var(--text-muted);">${esc(c.name)} · Payment ID: ${esc(p.id)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field">
+      <label>Client Account</label>
+      <input value="${esc(c.name)}" disabled style="opacity:0.7;" />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Payment Amount Received (₹) *</label>
+        <input type="number" id="f_edit_pm_am" value="${p.amount}" required autofocus />
+      </div>
+      <div class="field">
+        <label>Payment Date</label>
+        <input type="date" id="f_edit_pm_dt" value="${p.date || todayStr()}" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Payment Mode</label>
+        <select id="f_edit_pm_md">
+          ${PAYMENT_MODES.map(m => `<option ${m === p.mode ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Payment Note / Ref</label>
+        <input id="f_edit_pm_nt" value="${esc(p.note || '')}" placeholder="UPI Ref / Milestone" />
+      </div>
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center;">
+      <button class="btn btn-danger-ghost btn-sm" id="btnDelThisPay">🗑️ Delete Payment Record</button>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveEditedPay">Save Payment Update</button>
+      </div>
+    </div>
+  `, 520);
+
+  document.getElementById('btnSaveEditedPay').onclick = () => {
+    const am = Number(document.getElementById('f_edit_pm_am').value);
+    if (isNaN(am) || am < 0) { toast('Valid amount required'); return; }
+
+    p.amount = am;
+    p.date = document.getElementById('f_edit_pm_dt').value;
+    p.mode = document.getElementById('f_edit_pm_md').value;
+    p.note = document.getElementById('f_edit_pm_nt').value.trim();
+
+    saveState();
+    closeModal();
+    toast(`✓ Payment updated to ${fmtMoney(am)}`);
+    render();
+    if (p.clientId) openClientProfileModal(p.clientId);
+  };
+
+  document.getElementById('btnDelThisPay').onclick = () => {
+    if (confirm(`Remove this payment record of ${fmtMoney(p.amount)}?`)) {
+      const cid = p.clientId;
+      STATE.payments = STATE.payments.filter(pay => pay.id !== paymentId);
+      saveState();
+      closeModal();
+      toast(`✓ Payment record removed`);
+      render();
+      if (cid) openClientProfileModal(cid);
+    }
+  };
+}
+window.openEditPaymentModal = openEditPaymentModal;
+
 function openEditClientModal(clientId) {
   const c = STATE.clients.find(cl => cl.id === clientId);
   if (!c) return;
@@ -4158,6 +4252,8 @@ function openEditClientModal(clientId) {
     assignedStaffId: '',
     status: 'Active'
   };
+  const out = clientOutstanding(clientId);
+  const pays = STATE.payments.filter(p => p.clientId === clientId).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
   showModal(`
     <div class="modal-header">
@@ -4253,6 +4349,41 @@ function openEditClientModal(clientId) {
       </div>
     </div>
 
+    <!-- Financial Payments & Ledger Sync -->
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:12px; font-weight:700; color:var(--signal-cash); text-transform:uppercase;">
+          💵 Collected Payments & Ledger
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary);">
+          Pending Dues: <b class="mono" style="color:var(--accent-rose); font-size:13px;">${fmtMoney(out.pending)}</b>
+        </div>
+      </div>
+
+      <div class="field-row" style="margin-bottom:10px;">
+        <div class="field" style="margin-bottom:0;">
+          <label>Total Collected / Received Amount (₹)</label>
+          <input type="number" id="f_edit_cl_collected" value="${out.paid}" placeholder="0" />
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Setting this adjusts the client's collected payments and recalculates pending dues instantly.</div>
+        </div>
+      </div>
+
+      ${pays.length > 0 ? `
+        <div style="font-size:11.5px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">Recorded Transactions (${pays.length}):</div>
+        <div style="display:flex; flex-direction:column; gap:6px; max-height:120px; overflow-y:auto;">
+          ${pays.map(p => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:6px 10px; border-radius:6px; border:1px solid var(--border-subtle); font-size:12px;">
+              <div>
+                <span class="mono" style="font-weight:700; color:var(--signal-cash);">${fmtMoney(p.amount)}</span>
+                <span style="color:var(--text-muted);"> · ${fmtDate(p.date)} (${esc(p.mode)})</span>
+              </div>
+              <button type="button" class="btn btn-danger-ghost btn-sm" onclick="event.stopPropagation(); deleteClientPaymentDirect('${p.id}', '${clientId}')" style="padding:2px 6px; font-size:11px;">🗑️ Delete</button>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+
     <div class="field">
       <label>Client Specific Notes & Preferences</label>
       <textarea id="f_edit_cl_notes" rows="2" placeholder="e.g. Preferred posting times, brand aesthetics, custom contract requirements...">${esc(c.notes || '')}</textarea>
@@ -4304,7 +4435,7 @@ function openEditClientModal(clientId) {
       targetPkg.assignedStaffId = assignedStaffId;
       targetPkg.status = pkgStatus;
     } else {
-      STATE.packages.push({
+      targetPkg = {
         id: pkg.id || uid('pkg'),
         clientId: c.id,
         serviceType,
@@ -4313,7 +4444,43 @@ function openEditClientModal(clientId) {
         endDate,
         assignedStaffId,
         status: pkgStatus
-      });
+      };
+      STATE.packages.push(targetPkg);
+    }
+
+    // Handle Adjusted Collected Amount
+    const editedCollected = Number(document.getElementById('f_edit_cl_collected').value);
+    if (!isNaN(editedCollected)) {
+      const currentPaid = out.paid;
+      if (editedCollected !== currentPaid) {
+        if (editedCollected === 0) {
+          STATE.payments = STATE.payments.filter(p => p.clientId !== clientId);
+        } else if (pays.length === 1) {
+          pays[0].amount = editedCollected;
+        } else if (pays.length === 0) {
+          STATE.payments.push({
+            id: uid('pay'),
+            clientId: clientId,
+            packageId: targetPkg.id,
+            amount: editedCollected,
+            date: todayStr(),
+            mode: 'UPI (GPay / PhonePe / Paytm)',
+            note: 'Advance payment'
+          });
+        } else {
+          // Replace multiple with single adjusted entry
+          STATE.payments = STATE.payments.filter(p => p.clientId !== clientId);
+          STATE.payments.push({
+            id: uid('pay'),
+            clientId: clientId,
+            packageId: targetPkg.id,
+            amount: editedCollected,
+            date: todayStr(),
+            mode: 'UPI (GPay / PhonePe / Paytm)',
+            note: 'Adjusted collected payment'
+          });
+        }
+      }
     }
 
     saveState();
@@ -4326,6 +4493,7 @@ function openEditClientModal(clientId) {
     if (confirm(`Are you sure you want to delete client "${c.name}" and all associated packages? This action cannot be undone.`)) {
       STATE.clients = STATE.clients.filter(cl => cl.id !== clientId);
       STATE.packages = STATE.packages.filter(p => p.clientId !== clientId);
+      STATE.payments = STATE.payments.filter(p => p.clientId !== clientId);
       saveState();
       closeModal();
       toast(`Client "${c.name}" removed.`);
@@ -4516,8 +4684,21 @@ function openClientProfileModal(clientId) {
     </div>
     <div class="section-label" style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Payment History</div>
     <div class="table-wrap" style="margin-bottom:16px;">
-      <table><thead><tr><th>Date</th><th>Mode</th><th>Amount</th><th>Receipt</th></tr></thead>
-      <tbody>${pays.map(p => `<tr><td>${fmtDate(p.date)}</td><td>${esc(p.mode || 'Cash')}</td><td class="mono" style="color:var(--signal-cash);">${fmtMoney(p.amount)}</td><td><button class="wa-btn btn-sm" data-wa-pay="${p.id}">🌐 WA Receipt</button></td></tr>`).join('') || `<tr><td colspan="4" class="empty">No payments received yet.</td></tr>`}</tbody></table>
+      <table>
+        <thead><tr><th>Date</th><th>Mode</th><th>Amount</th><th>Receipt</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody>${pays.map(p => `<tr>
+          <td>${fmtDate(p.date)}</td>
+          <td>${esc(p.mode || 'Cash')}</td>
+          <td class="mono font-weight-bold" style="color:var(--signal-cash);">${fmtMoney(p.amount)}</td>
+          <td><button class="wa-btn btn-sm" data-wa-pay="${p.id}">🌐 WA Receipt</button></td>
+          <td style="text-align:right;">
+            <div style="display:inline-flex; gap:6px;">
+              <button class="btn btn-ghost btn-sm" data-edit-pay="${p.id}" title="Edit Payment" style="padding:2px 6px;">✏️</button>
+              <button class="btn btn-danger-ghost btn-sm" data-del-pay="${p.id}" title="Delete Payment" style="padding:2px 6px;">🗑️</button>
+            </div>
+          </td>
+        </tr>`).join('') || `<tr><td colspan="5" class="empty">No payments received yet.</td></tr>`}</tbody>
+      </table>
     </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
   `, 680);
@@ -4532,6 +4713,23 @@ function openClientProfileModal(clientId) {
   document.querySelectorAll('[data-wa-pay]').forEach(el => {
     el.onclick = () => {
       openMultiLangMessageModal('receipt', clientId, el.dataset.waPay);
+    };
+  });
+  document.querySelectorAll('[data-edit-pay]').forEach(el => {
+    el.onclick = () => {
+      openEditPaymentModal(el.dataset.editPay);
+    };
+  });
+  document.querySelectorAll('[data-del-pay]').forEach(el => {
+    el.onclick = () => {
+      const p = STATE.payments.find(pay => pay.id === el.dataset.delPay);
+      if (p && confirm(`Remove this payment record of ${fmtMoney(p.amount)}?`)) {
+        STATE.payments = STATE.payments.filter(pay => pay.id !== el.dataset.delPay);
+        saveState();
+        toast('✓ Payment record removed successfully');
+        render();
+        openClientProfileModal(clientId);
+      }
     };
   });
 }
@@ -5425,25 +5623,83 @@ function attachFinance() {
 }
 
 function openPaymentModal(clientId = null) {
+  const initialCid = clientId || (STATE.clients[0] ? STATE.clients[0].id : null);
+  const initialOut = initialCid ? clientOutstanding(initialCid) : { pending: 0 };
+  const defaultPayAmount = initialOut.pending > 0 ? initialOut.pending : '';
+
   showModal(`
-    <div class="modal-header"><h3 class="modal-title">Record Client Payment</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Client *</label><select id="f_pm_cl" ${clientId ? 'disabled' : ''}>${STATE.clients.map(c => `<option value="${c.id}" ${c.id === clientId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
-    <div class="field-row">
-      <div class="field"><label>Amount (₹) *</label><input type="number" id="f_pm_am" placeholder="35000" autofocus required /></div>
-      <div class="field"><label>Date</label><input type="date" id="f_pm_dt" value="${todayStr()}" /></div>
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">Record Client Payment</h3>
+        <div style="font-size:12px; color:var(--text-muted);">${clientId ? 'Recording payment for selected client ledger' : 'Select client and enter payment details'}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="field-row">
-      <div class="field"><label>Mode</label><select id="f_pm_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select></div>
-      <div class="field"><label>Payment Note / Ref</label><input id="f_pm_nt" placeholder="UPI Reference / Milestone" /></div>
+
+    <div class="field">
+      <label>Client Account *</label>
+      <select id="f_pm_cl" ${clientId ? 'disabled' : ''}>
+        ${STATE.clients.map(c => {
+          const out = clientOutstanding(c.id);
+          return `<option value="${c.id}" data-pending="${out.pending}" ${c.id === initialCid ? 'selected' : ''}>${esc(c.name)} (${esc(c.company || 'Client')} · Pending: ${fmtMoney(out.pending)})</option>`;
+        }).join('')}
+      </select>
     </div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-signal" id="savePmBtn">Record & Generate Receipt ➔</button></div>
-  `, 520);
+
+    <div class="field-row">
+      <div class="field">
+        <label>Payment Amount Received (₹) *</label>
+        <input type="number" id="f_pm_am" value="${defaultPayAmount}" placeholder="${initialOut.pending > 0 ? initialOut.pending : '20000'}" autofocus required />
+      </div>
+      <div class="field">
+        <label>Payment Date</label>
+        <input type="date" id="f_pm_dt" value="${todayStr()}" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Payment Mode</label>
+        <select id="f_pm_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select>
+      </div>
+      <div class="field">
+        <label>Payment Note / Reference</label>
+        <input id="f_pm_nt" placeholder="UPI Reference / Milestone" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-signal" id="savePmBtn">Record & Generate Receipt ➔</button>
+    </div>
+  `, 540);
+
+  const clSel = document.getElementById('f_pm_cl');
+  if (clSel && !clientId) {
+    clSel.onchange = () => {
+      const selected = clSel.options[clSel.selectedIndex];
+      const pend = Number(selected.dataset.pending) || 0;
+      const amtInput = document.getElementById('f_pm_am');
+      if (amtInput) {
+        amtInput.value = pend > 0 ? pend : '';
+        amtInput.placeholder = pend > 0 ? pend : '20000';
+      }
+    };
+  }
+
   document.getElementById('savePmBtn').onclick = () => {
     const cid = clientId || document.getElementById('f_pm_cl').value;
     const am = Number(document.getElementById('f_pm_am').value);
-    if (!am) { toast('Valid amount required'); return; }
+    if (!am || am <= 0) { toast('Valid payment amount required'); return; }
     const payId = uid('pay');
-    STATE.payments.push({ id: payId, clientId: cid, amount: am, date: document.getElementById('f_pm_dt').value, mode: document.getElementById('f_pm_md').value, note: document.getElementById('f_pm_nt').value.trim() });
+    STATE.payments.push({
+      id: payId,
+      clientId: cid,
+      amount: am,
+      date: document.getElementById('f_pm_dt').value,
+      mode: document.getElementById('f_pm_md').value,
+      note: document.getElementById('f_pm_nt').value.trim()
+    });
     saveState();
     closeModal();
     toast(`✓ Recorded payment of ${fmtMoney(am)}`);
