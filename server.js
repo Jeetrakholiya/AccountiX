@@ -138,167 +138,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// In-memory OTP Store with 10-minute expiry
-const OTP_STORE = new Map();
-
-// Helper: Generate secure 6-digit random OTP
-function generateRandomOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// 2a. Authentication: Send Random OTP to Gmail / Email Address
-app.post('/api/auth/send-otp', async (req, res) => {
-  const { email } = req.body;
-  if (!email || !email.includes('@')) {
-    return res.status(400).json({ error: 'Valid Gmail or email address is required' });
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-  const otp = generateRandomOTP();
-  const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-  OTP_STORE.set(cleanEmail, {
-    otp,
-    expiresAt,
-    attempts: 0
-  });
-
-  console.log(`\n📨 [OTP DISPATCH] Generated 6-Digit Random OTP for ${cleanEmail}: ${otp} (Expires in 10 mins)\n`);
-
-  res.json({
-    success: true,
-    message: `6-Digit OTP sent successfully to ${cleanEmail}`,
-    email: cleanEmail,
-    otpCode: otp, // Sent for visual toast & helper banner
-    expiresAt: new Date(expiresAt).toISOString()
-  });
-});
-
-// 2b. Authentication: Verify Random OTP & Save Gmail for Re-Login at Supabase
-app.post('/api/auth/verify-otp', async (req, res) => {
-  const { email, otp, name, role } = req.body;
-
-  if (!email || !otp) {
-    return res.status(400).json({ error: 'Email and 6-digit OTP are required' });
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-  const record = OTP_STORE.get(cleanEmail);
-
-  // Validate OTP
-  if (!record) {
-    if (otp.length !== 6) {
-      return res.status(400).json({ error: 'Invalid or expired OTP. Please request a new code.' });
-    }
-  } else {
-    if (Date.now() > record.expiresAt) {
-      OTP_STORE.delete(cleanEmail);
-      return res.status(400).json({ error: 'OTP has expired. Please click Resend OTP for a fresh code.' });
-    }
-
-    if (record.otp !== otp.trim()) {
-      record.attempts = (record.attempts || 0) + 1;
-      if (record.attempts >= 5) {
-        OTP_STORE.delete(cleanEmail);
-        return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new OTP.' });
-      }
-      return res.status(400).json({ error: 'Incorrect 6-digit OTP. Please check the code and try again.' });
-    }
-
-    // OTP Verified! Consume the OTP
-    OTP_STORE.delete(cleanEmail);
-  }
-
-  const db = readDb();
-  let user = db.allUsers.find(u => u.email.toLowerCase() === cleanEmail);
-
-  if (!user) {
-    // Dynamically provision verified user profile
-    const userName = name && name.trim() ? name.trim() : cleanEmail.split('@')[0].toUpperCase();
-    const userRole = role || 'manager';
-    user = {
-      id: `usr_${Date.now()}`,
-      name: userName,
-      email: cleanEmail,
-      role: userRole,
-      companyId: `comp_${Date.now()}`,
-      companyName: userRole === 'admin' ? 'AccountiX Platform HQ' : `${userName}'s Agency`,
-      title: userRole === 'admin' ? 'Platform Administrator' : userRole === 'manager' ? 'Agency Managing Director' : 'Specialist',
-      avatar: userRole === 'admin' ? '👑' : userRole === 'manager' ? '🏢' : '👥',
-      lastActiveAt: new Date().toISOString(),
-      status: 'Active',
-      purchasedDate: new Date().toISOString().split('T')[0],
-      plan: userRole === 'manager' ? '1 Year Plan' : 'Enterprise Suite',
-      authMethod: 'Gmail ID + Random OTP (Verified)'
-    };
-    db.allUsers.push(user);
-  } else {
-    user.lastActiveAt = new Date().toISOString();
-    if (name && name.trim()) user.name = name.trim();
-    if (role) user.role = role;
-  }
-
-  // Record login security audit
-  const now = new Date();
-  const timeStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-  const logEntry = {
-    id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-    userId: user.id,
-    userName: user.name,
-    userEmail: user.email,
-    role: user.role,
-    companyName: user.companyName || 'Primary Workspace',
-    loginTime: timeStr,
-    authMethod: 'Gmail ID + 6-Digit OTP (Verified)',
-    status: 'Success (Verified)',
-    device: req.headers['user-agent'] && req.headers['user-agent'].includes('Mobile') ? 'Mobile Device' : 'Desktop Workstation'
-  };
-
-  db.loginLogs.unshift(logEntry);
-  writeDb(db);
-
-  // Sync to Supabase cloud if connected
-  if (supabase) {
-    try {
-      await supabase.from('accountix_users').upsert([{
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        company_id: user.companyId,
-        company_name: user.companyName,
-        status: user.status,
-        last_active_at: user.lastActiveAt,
-        plan: user.plan
-      }]);
-
-      await supabase.from('accountix_login_logs').insert([{
-        id: logEntry.id,
-        user_id: logEntry.userId,
-        user_name: logEntry.userName,
-        user_email: logEntry.userEmail,
-        role: logEntry.role,
-        company_name: logEntry.companyName,
-        login_time: logEntry.loginTime,
-        auth_method: logEntry.authMethod,
-        status: logEntry.status,
-        device: logEntry.device
-      }]);
-    } catch (err) {
-      console.warn('Supabase OTP sync notice:', err.message);
-    }
-  }
-
-  res.json({
-    success: true,
-    user,
-    log: logEntry,
-    savedEmail: cleanEmail,
-    message: `🎉 Gmail ID verified successfully! Welcome, ${user.name}.`
-  });
-});
-
-// 2c. Authentication: Sign In (Email + Password)
+// 2. Authentication: Sign In (Email + Password)
 app.post('/api/auth/login', async (req, res) => {
   const { email, password, role } = req.body;
   if (!email || !password) {
@@ -549,6 +389,91 @@ app.post('/api/settings', (req, res) => {
   db.settings = { ...db.settings, ...req.body };
   writeDb(db);
   res.json({ success: true, settings: db.settings });
+});
+
+// ================= 9. EMAIL OTP AUTHENTICATION (GMAIL API / SMTP) =================
+const { generateSecureOtp, saveOtp, verifyOtp } = require('./lib/otp');
+const { sendOtpEmail } = require('./lib/mailer');
+
+// POST /api/send-otp
+app.post('/api/send-otp', async (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({ success: false, error: 'Invalid email address format.' });
+    }
+
+    const otp = generateSecureOtp();
+    const saveResult = saveOtp(email, otp);
+
+    if (!saveResult.success) {
+      return res.status(429).json({ success: false, error: saveResult.error });
+    }
+
+    const mailResult = await sendOtpEmail(email.trim(), otp);
+
+    return res.json({
+      success: true,
+      message: 'Verification code sent to your email address.',
+      devMode: !!mailResult.devMode,
+    });
+  } catch (error) {
+    console.error('Error in /api/send-otp:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Failed to send OTP email. Please check server logs.' });
+  }
+});
+
+// POST /api/verify-otp
+app.post('/api/verify-otp', (req, res) => {
+  try {
+    const { email, otp } = req.body || {};
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit verification code are required.' });
+    }
+
+    const verification = verifyOtp(email, otp);
+    if (!verification.valid) {
+      return res.status(400).json({ success: false, error: verification.message });
+    }
+
+    // Log successful OTP verification into database audit trail
+    const db = readDb();
+    const cleanEmail = email.toLowerCase().trim();
+    const userMatch = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    const logEntry = {
+      id: `log_otp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      userId: userMatch ? userMatch.id : 'usr_guest',
+      userName: userMatch ? userMatch.name : cleanEmail.split('@')[0],
+      userEmail: cleanEmail,
+      role: userMatch ? userMatch.role : 'verified_user',
+      companyName: userMatch ? userMatch.companyName : 'Email Verified User',
+      loginTime: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }),
+      authMethod: 'Gmail 6-Digit OTP (Verified)',
+      status: 'Success (Verified)',
+      device: req.headers['user-agent'] && req.headers['user-agent'].includes('Mobile') ? 'Mobile Device' : 'Desktop Workstation'
+    };
+
+    if (!db.loginLogs) db.loginLogs = [];
+    db.loginLogs.unshift(logEntry);
+    if (db.loginLogs.length > 50) db.loginLogs = db.loginLogs.slice(0, 50);
+    writeDb(db);
+
+    return res.json({
+      success: true,
+      message: verification.message,
+      verifiedEmail: cleanEmail,
+      user: userMatch || { email: cleanEmail, role: 'verified_user', name: cleanEmail.split('@')[0] }
+    });
+  } catch (error) {
+    console.error('Error in /api/verify-otp:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Internal server error during verification.' });
+  }
 });
 
 // Fallback all frontend routes to index.html (SPA support)
