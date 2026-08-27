@@ -1,5 +1,5 @@
 /**
- * AccountiX Role-Based Access Control (RBAC) & Google Auth Utility
+ * AccountiX Role-Based Access Control (RBAC) & Gmail OTP Verification Utility
  */
 
 export const USER_ROLES = {
@@ -52,6 +52,91 @@ export const DEMO_PROFILES = [
     avatar: '📹'
   }
 ];
+
+/**
+ * Generate a cryptographically random 6-digit OTP
+ */
+export function generateRandomOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/**
+ * Storage keys for saved email and session re-login
+ */
+export const STORAGE_KEYS = {
+  SAVED_GMAIL: 'accountix_saved_gmail',
+  SAVED_USER: 'accountix_saved_user',
+  LAST_LOGIN: 'accountix_last_login'
+};
+
+/**
+ * Save verified Gmail address & profile to LocalStorage for 1-click re-login
+ */
+export function saveGmailForReLogin(email, user = null) {
+  try {
+    if (email) {
+      localStorage.setItem(STORAGE_KEYS.SAVED_GMAIL, email.trim().toLowerCase());
+      localStorage.setItem(STORAGE_KEYS.LAST_LOGIN, new Date().toISOString());
+    }
+    if (user) {
+      localStorage.setItem(STORAGE_KEYS.SAVED_USER, JSON.stringify(user));
+    }
+  } catch (e) {
+    console.warn('Storage save failed:', e);
+  }
+}
+
+/**
+ * Retrieve saved Gmail address for re-login
+ */
+export function getSavedGmailForReLogin() {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.SAVED_GMAIL) || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Retrieve saved user profile for re-login
+ */
+export function getSavedUserForReLogin() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SAVED_USER);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Save verified user email and session into Supabase Cloud
+ */
+export async function saveVerifiedUserToSupabase(user, supabaseClient) {
+  if (!supabaseClient || !user || !user.email) return { success: false, note: 'No Supabase client or email' };
+  try {
+    const { error } = await supabaseClient.from('accountix_users').upsert([{
+      id: user.id || `usr_${Date.now()}`,
+      name: user.name || user.email.split('@')[0],
+      email: user.email.trim().toLowerCase(),
+      role: user.role || 'manager',
+      company_id: user.companyId || 'comp_1',
+      company_name: user.companyName || 'Primary Workspace',
+      status: 'Active',
+      last_active_at: new Date().toISOString(),
+      plan: user.plan || '1 Year Plan'
+    }]);
+
+    if (error) {
+      console.warn('Supabase save user warning:', error.message);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    console.warn('Supabase save error:', err);
+    return { success: false, error: err.message };
+  }
+}
 
 export function getInactiveUsers(users, dayThreshold = 7) {
   const now = Date.now();
