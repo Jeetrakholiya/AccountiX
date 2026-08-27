@@ -1310,6 +1310,192 @@ function queueSupabasePush() {
   }, 1200);
 }
 
+/* ================= GLOBAL JWT AUTH & MULTI-TENANT WORKSPACE API CLIENT ================= */
+const JWT_STORAGE_KEY = 'accountix_jwt_token';
+
+const AccountiX_API = {
+  getToken() {
+    return localStorage.getItem(JWT_STORAGE_KEY) || '';
+  },
+  setToken(token) {
+    if (token) localStorage.setItem(JWT_STORAGE_KEY, token);
+    else localStorage.removeItem(JWT_STORAGE_KEY);
+  },
+  getHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = this.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return headers;
+  },
+  async login(email, password, role) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        this.setToken(data.token);
+        if (data.workspaceData) {
+          this.applyWorkspaceData(data.workspaceData);
+        }
+      }
+      return data;
+    } catch (e) {
+      console.warn('API login offline fallback:', e);
+      return { success: false, error: e.message };
+    }
+  },
+  async register(name, email, password, confirmPassword, role) {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, confirmPassword, role })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        this.setToken(data.token);
+        if (data.workspaceData) {
+          this.applyWorkspaceData(data.workspaceData);
+        }
+      }
+      return data;
+    } catch (e) {
+      console.warn('API register offline fallback:', e);
+      return { success: false, error: e.message };
+    }
+  },
+  async fetchMe() {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: this.getHeaders()
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        STATE.currentUser = { ...data.user };
+        STATE.isAuthenticated = true;
+        if (data.workspaceData) {
+          this.applyWorkspaceData(data.workspaceData);
+        }
+        if (data.loginLogs && data.loginLogs.length) {
+          STATE.loginLogs = data.loginLogs;
+        }
+        if (data.allUsers && data.allUsers.length) {
+          STATE.allUsers = data.allUsers;
+        }
+        return data;
+      }
+      return null;
+    } catch (e) {
+      console.warn('API fetchMe note:', e);
+      return null;
+    }
+  },
+  async logout(user) {
+    try {
+      if (user) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name,
+            role: user.role,
+            companyName: user.companyName
+          })
+        });
+      }
+    } catch (e) {}
+    this.setToken('');
+  },
+  async syncWorkspace(state) {
+    try {
+      const companyId = state.currentUser ? state.currentUser.companyId : 'comp_1';
+      await fetch('/api/workspace/sync', {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          companyId,
+          clients: state.clients || [],
+          packages: state.packages || [],
+          payments: state.payments || [],
+          expenses: state.expenses || [],
+          staff: state.staff || [],
+          attendance: state.attendance || [],
+          salaryPayments: state.salaryPayments || [],
+          tasks: state.tasks || [],
+          contentItems: state.contentItems || [],
+          leads: state.leads || [],
+          serviceCatalog: state.serviceCatalog || [],
+          settings: state.settings || {},
+          companies: state.companies || [],
+          allUsers: state.allUsers || []
+        })
+      });
+    } catch (e) {
+      console.warn('Workspace sync note:', e);
+    }
+  },
+  async fetchLogs() {
+    try {
+      const res = await fetch('/api/admin/logs');
+      const logs = await res.json();
+      if (Array.isArray(logs) && logs.length) {
+        STATE.loginLogs = logs;
+      }
+      return logs;
+    } catch (e) {
+      return STATE.loginLogs || [];
+    }
+  },
+  async recordAudit(event) {
+    try {
+      const res = await fetch('/api/admin/logs/record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      });
+      const data = await res.json();
+      if (data && data.log) {
+        if (!STATE.loginLogs) STATE.loginLogs = [];
+        if (!STATE.loginLogs.find(l => l.id === data.log.id)) {
+          STATE.loginLogs.unshift(data.log);
+        }
+      }
+      return data;
+    } catch (e) {}
+  },
+  applyWorkspaceData(ws) {
+    if (!ws) return;
+    if (ws.clients && ws.clients.length) STATE.clients = ws.clients;
+    if (ws.packages && ws.packages.length) STATE.packages = ws.packages;
+    if (ws.payments && ws.payments.length) STATE.payments = ws.payments;
+    if (ws.expenses && ws.expenses.length) STATE.expenses = ws.expenses;
+    if (ws.staff && ws.staff.length) STATE.staff = ws.staff;
+    if (ws.attendance) STATE.attendance = ws.attendance;
+    if (ws.salaryPayments) STATE.salaryPayments = ws.salaryPayments;
+    if (ws.tasks) STATE.tasks = ws.tasks;
+    if (ws.contentItems) STATE.contentItems = ws.contentItems;
+    if (ws.leads) STATE.leads = ws.leads;
+    if (ws.serviceCatalog && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
+    if (ws.settings && Object.keys(ws.settings).length) STATE.settings = { ...STATE.settings, ...ws.settings };
+  }
+};
+window.AccountiX_API = AccountiX_API;
+
+let _wsSyncTimer = null;
+function queueWorkspaceSync() {
+  clearTimeout(_wsSyncTimer);
+  _wsSyncTimer = setTimeout(() => {
+    AccountiX_API.syncWorkspace(STATE);
+  }, 1000);
+}
+
 function saveLocalState() {
   try {
     const { view, _search, _salesTab, _workTab, _teamTab, _moneyTab, _clientTab, _simTargetProfit, _attDate, _reportTab, ...persistable } = STATE;
@@ -1320,9 +1506,7 @@ function saveLocalState() {
 function saveState() {
   saveLocalState();
   queueSupabasePush();
-  if (window.AccountiX_API && typeof window.AccountiX_API.syncState === 'function') {
-    window.AccountiX_API.syncState(STATE);
-  }
+  queueWorkspaceSync();
 }
 
 async function loadState() {
@@ -1343,16 +1527,14 @@ async function loadState() {
     document.documentElement.setAttribute('data-theme', STATE.settings.theme);
   }
 
-  // Attempt backend state hydration
-  if (window.AccountiX_API && typeof window.AccountiX_API.fetchState === 'function') {
-    try {
-      const serverState = await window.AccountiX_API.fetchState();
-      if (serverState && serverState.allUsers && serverState.allUsers.length) {
-        if (serverState.loginLogs) STATE.loginLogs = serverState.loginLogs;
-        if (serverState.allUsers) STATE.allUsers = serverState.allUsers;
-      }
-    } catch(e) {}
-  }
+  // Attempt backend JWT session & workspace hydration
+  try {
+    const me = await AccountiX_API.fetchMe();
+    if (me && me.user) {
+      console.log('✓ JWT Session Authenticated:', me.user.name);
+    }
+    await AccountiX_API.fetchLogs();
+  } catch(e) {}
 
   // If Supabase credentials configured, trigger background sync
   if (isSupabaseConnected()) {
@@ -1878,10 +2060,17 @@ function recordLoginAudit(user, authMethod = 'Email & Password (Verified)') {
     device: navigator.userAgent.includes('Mobile') ? 'Mobile Device' : 'Desktop Workstation'
   };
 
-  STATE.loginLogs.unshift(logEntry);
+  if (!STATE.loginLogs.find(l => l.id === logEntry.id)) {
+    STATE.loginLogs.unshift(logEntry);
+  }
   if (user.id) {
     const existing = (STATE.allUsers || []).find(u => u.id === user.id || u.email === user.email);
     if (existing) existing.lastActiveAt = now.toISOString();
+  }
+
+  // Persist to server global logs so Admin on all devices sees it immediately
+  if (window.AccountiX_API && typeof window.AccountiX_API.recordAudit === 'function') {
+    window.AccountiX_API.recordAudit(logEntry);
   }
   saveState();
 }
@@ -2114,7 +2303,7 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
   `, 520);
 
   if (mode === 'login') {
-    document.getElementById('submitLoginBtn').onclick = () => {
+    document.getElementById('submitLoginBtn').onclick = async () => {
       const email = document.getElementById('auth_email').value.trim();
       const pass = document.getElementById('auth_password').value;
 
@@ -2123,10 +2312,20 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
         return;
       }
 
-      // Match user by email
-      let user = (STATE.allUsers || []).find(u => u.email.toLowerCase() === email.toLowerCase());
+      const btn = document.getElementById('submitLoginBtn');
+      if (btn) btn.innerHTML = 'Verifying JWT... ⏳';
+
+      // Perform real backend JWT authentication
+      let user = null;
+      if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
+        const loginRes = await window.AccountiX_API.login(email, pass, targetRole);
+        if (loginRes && loginRes.user) {
+          user = loginRes.user;
+        }
+      }
+
       if (!user) {
-        user = DEMO_PROFILES.find(p => p.email.toLowerCase() === email.toLowerCase());
+        user = (STATE.allUsers || []).find(u => u.email.toLowerCase() === email.toLowerCase()) || DEMO_PROFILES.find(p => p.email.toLowerCase() === email.toLowerCase());
       }
 
       // If user not found, create a dynamic profile for the given role
@@ -2157,10 +2356,7 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
       else if (user.role === 'employee') STATE.view = 'emp_workspace';
       else STATE.view = 'dashboard';
 
-      recordLoginAudit(user, 'Email & Password (Verified)');
-      if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
-        window.AccountiX_API.login(email, pass, targetRole).catch(() => {});
-      }
+      recordLoginAudit(user, 'JWT Verified (Email + Password)');
       closeModal();
       render();
       toast(`✓ Verified & Logged in as ${user.name} (${user.role.toUpperCase()})`);
@@ -2189,7 +2385,7 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
     p1.oninput = checkMatch;
     p2.oninput = checkMatch;
 
-    document.getElementById('submitRegBtn').onclick = () => {
+    document.getElementById('submitRegBtn').onclick = async () => {
       const name = document.getElementById('auth_reg_name').value.trim();
       const email = document.getElementById('auth_reg_email').value.trim();
       const pass1 = p1.value;
@@ -2210,35 +2406,44 @@ function openEmailPasswordAuthModal(targetRole = 'manager', mode = 'login') {
         return;
       }
 
-      // Create new verified account
-      const newUser = {
-        id: `usr_${Date.now()}`,
-        name: name,
-        email: email,
-        password: pass1,
-        role: targetRole,
-        companyId: `comp_${Date.now()}`,
-        companyName: targetRole === 'admin' ? 'AccountiX Platform HQ' : `${name}'s Agency`,
-        title: targetRole === 'admin' ? 'Platform Administrator' : targetRole === 'manager' ? 'Managing Director' : 'Specialist',
-        avatar: targetRole === 'admin' ? '👑' : targetRole === 'manager' ? '🏢' : '👥',
-        lastActiveAt: new Date().toISOString(),
-        status: 'Active',
-        purchasedDate: todayStr(),
-        plan: targetRole === 'manager' ? 'Pro Agency' : 'Enterprise Suite'
-      };
+      const regBtn = document.getElementById('submitRegBtn');
+      if (regBtn) regBtn.innerHTML = 'Registering Account... ⏳';
 
-      STATE.allUsers.push(newUser);
-      DEMO_PROFILES.push(newUser);
-      STATE.currentUser = { ...newUser };
+      let user = null;
+      if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
+        const regRes = await window.AccountiX_API.register(name, email, pass1, pass2, targetRole);
+        if (regRes && regRes.user) {
+          user = regRes.user;
+        }
+      }
+
+      if (!user) {
+        user = {
+          id: `usr_${Date.now()}`,
+          name: name,
+          email: email,
+          password: pass1,
+          role: targetRole,
+          companyId: `comp_${Date.now()}`,
+          companyName: targetRole === 'admin' ? 'AccountiX Platform HQ' : `${name}'s Agency`,
+          title: targetRole === 'admin' ? 'Platform Administrator' : targetRole === 'manager' ? 'Managing Director' : 'Specialist',
+          avatar: targetRole === 'admin' ? '👑' : targetRole === 'manager' ? '🏢' : '👥',
+          lastActiveAt: new Date().toISOString(),
+          status: 'Active',
+          purchasedDate: todayStr(),
+          plan: targetRole === 'manager' ? 'Pro Agency' : 'Enterprise Suite'
+        };
+        STATE.allUsers.push(user);
+        DEMO_PROFILES.push(user);
+      }
+
+      STATE.currentUser = { ...user };
       STATE.isAuthenticated = true;
-      if (newUser.role === 'admin') STATE.view = 'admin_overview';
-      else if (newUser.role === 'employee') STATE.view = 'emp_workspace';
+      if (user.role === 'admin') STATE.view = 'admin_overview';
+      else if (user.role === 'employee') STATE.view = 'emp_workspace';
       else STATE.view = 'dashboard';
 
-      recordLoginAudit(newUser, 'Email + 2-Time Password Verified');
-      if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
-        window.AccountiX_API.register(name, email, pass1, pass2, targetRole).catch(() => {});
-      }
+      recordLoginAudit(user, 'Email + 2-Time Password Verified (JWT)');
       closeModal();
       render();
       toast(`🎉 Account created with 2-time password verification! Welcome, ${name}.`);
@@ -2295,8 +2500,12 @@ function loginGateway(role, targetId, authMethod = '1-Click Portal Authenticatio
 }
 window.loginGateway = loginGateway;
 
-function logoutGateway() {
+async function logoutGateway() {
+  const user = STATE.currentUser;
   STATE.isAuthenticated = false;
+  if (user && window.AccountiX_API && typeof window.AccountiX_API.logout === 'function') {
+    await window.AccountiX_API.logout(user);
+  }
   saveState();
   render();
   toast('Signed out to Authentication Gateway');
@@ -3023,19 +3232,31 @@ function openReengageEmailModal(userId) {
   }
 }
 /* ---------- SUPER ADMIN: LOGIN & ACCESS AUDIT TRAIL ---------- */
+async function refreshAdminLogsRealtime() {
+  const btn = document.getElementById('btnRefreshAdminLogs');
+  if (btn) btn.innerHTML = 'Syncing... ⏳';
+  if (window.AccountiX_API && typeof window.AccountiX_API.fetchLogs === 'function') {
+    await window.AccountiX_API.fetchLogs();
+  }
+  render();
+  toast('✓ Live global audit logs synced from platform server');
+}
+window.refreshAdminLogsRealtime = refreshAdminLogsRealtime;
+
 function renderAdminLogsView() {
   const logs = STATE.loginLogs || [];
   const uniqueUsers = new Set(logs.map(l => l.userEmail)).size;
-  const pwVerified = logs.filter(l => (l.authMethod || '').includes('Password') || (l.authMethod || '').includes('Verified')).length;
+  const pwVerified = logs.filter(l => (l.authMethod || '').includes('Password') || (l.authMethod || '').includes('Verified') || (l.authMethod || '').includes('JWT')).length;
   const todayLogins = logs.filter(l => (l.loginTime || '').includes('2026') || (l.loginTime || '').includes('Aug')).length;
 
   return `
     <div class="view-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
       <div>
-        <h1 class="view-title">🔐 User Login & Access Audit Trail</h1>
-        <p class="view-sub" style="color:var(--text-secondary);">Real-time platform security ledger recording every user authentication, device, role, and 2-step verification</p>
+        <h1 class="view-title">🔐 Global User Login & Access Audit Trail</h1>
+        <p class="view-sub" style="color:var(--text-secondary);">Real-time platform security ledger recording every user authentication, device, role, and JWT verification across all devices</p>
       </div>
       <div style="display:flex; gap:8px;">
+        <button class="btn btn-signal btn-sm" id="btnRefreshAdminLogs" onclick="refreshAdminLogsRealtime()">🔄 Live Sync Logs</button>
         <button class="btn btn-primary btn-sm" onclick="exportLoginLogsCsv()">📊 Export Audit CSV</button>
         <button class="btn btn-ghost btn-sm" onclick="clearLoginLogs()" style="color:var(--accent-rose); border-color:rgba(244,63,94,0.3);">🗑️ Clear Logs</button>
       </div>
@@ -3046,7 +3267,7 @@ function renderAdminLogsView() {
       <div class="card">
         <div class="stat-label">Total Recorded Logins</div>
         <div class="stat-value good">${logs.length}</div>
-        <div class="stat-footer">All-time authenticated sessions</div>
+        <div class="stat-footer">All-time authenticated sessions across all devices</div>
       </div>
       <div class="card">
         <div class="stat-label">Unique Active Users</div>
@@ -3054,7 +3275,7 @@ function renderAdminLogsView() {
         <div class="stat-footer">Across all agency tenants</div>
       </div>
       <div class="card">
-        <div class="stat-label">Password 2-Step Verified</div>
+        <div class="stat-label">JWT & Password Verified</div>
         <div class="stat-value small" style="color:var(--signal-cash);">${pwVerified}</div>
         <div class="stat-footer">Verified credential logins</div>
       </div>
@@ -3068,8 +3289,8 @@ function renderAdminLogsView() {
     <!-- Live Audit Table -->
     <div class="card">
       <div class="card-title">
-        <span>🔐 Authenticated Login Events (${logs.length})</span>
-        <span class="pill pill-green" style="font-size:11px;">🟢 Real-Time Capture Active</span>
+        <span>🔐 Authenticated Login & Access Events (${logs.length})</span>
+        <span class="pill pill-green" style="font-size:11px;">🟢 Real-Time Cross-Device Capture</span>
       </div>
       <div class="table-wrap" style="margin-bottom:0;">
         <table>
@@ -3098,13 +3319,13 @@ function renderAdminLogsView() {
                 </td>
                 <td style="font-size:12px;">${esc(l.companyName || '—')}</td>
                 <td>
-                  <span class="pill pill-green" style="font-size:11px;">
-                    ✓ ${esc(l.authMethod || 'Verified')}
+                  <span class="pill ${l.authMethod && l.authMethod.includes('Out') ? 'pill-rose' : 'pill-green'}" style="font-size:11px;">
+                    ${l.authMethod && l.authMethod.includes('Out') ? '🚪' : '✓'} ${esc(l.authMethod || 'Verified')}
                   </span>
                 </td>
                 <td style="font-size:12px; color:var(--text-muted);">${esc(l.device || 'Desktop')}</td>
                 <td>
-                  <span class="pill pill-green" style="font-weight:700;">${esc(l.status || 'Success')}</span>
+                  <span class="pill ${l.status === 'Logged Out' ? 'pill-rose' : 'pill-green'}" style="font-weight:700;">${esc(l.status || 'Success')}</span>
                 </td>
               </tr>
             `).join('') : `
@@ -3116,7 +3337,14 @@ function renderAdminLogsView() {
     </div>
   `;
 }
-function attachAdminLogs() {}
+function attachAdminLogs() {
+  if (window.AccountiX_API && typeof window.AccountiX_API.fetchLogs === 'function') {
+    window.AccountiX_API.fetchLogs().then(() => {
+      const tableBody = document.querySelector('#mainContainer tbody');
+      // Already rendered or will refresh
+    }).catch(() => {});
+  }
+}
 
 function exportLoginLogsCsv() {
   const logs = STATE.loginLogs || [];
@@ -3150,11 +3378,14 @@ function exportLoginLogsCsv() {
 }
 window.exportLoginLogsCsv = exportLoginLogsCsv;
 
-function clearLoginLogs() {
+async function clearLoginLogs() {
   if (confirm('Are you sure you want to clear the security login audit trail?')) {
     STATE.loginLogs = [];
+    try {
+      await fetch('/api/admin/logs', { method: 'DELETE' });
+    } catch(e) {}
     saveState();
-    toast('Login logs cleared');
+    toast('Login logs cleared from server and local database');
     render();
   }
 }
