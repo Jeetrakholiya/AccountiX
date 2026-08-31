@@ -1623,20 +1623,21 @@ const AccountiX_API = {
     }
   },
   applyWorkspaceData(ws) {
-    if (!ws) return;
-    if (ws.clients && ws.clients.length) STATE.clients = ws.clients;
-    else if (!STATE.clients || !STATE.clients.length) seedData();
-    if (ws.packages && ws.packages.length) STATE.packages = ws.packages;
-    if (ws.payments && ws.payments.length) STATE.payments = ws.payments;
-    if (ws.expenses && ws.expenses.length) STATE.expenses = ws.expenses;
-    if (ws.staff && ws.staff.length) STATE.staff = ws.staff;
-    if (ws.attendance) STATE.attendance = ws.attendance;
-    if (ws.salaryPayments) STATE.salaryPayments = ws.salaryPayments;
-    if (ws.tasks) STATE.tasks = ws.tasks;
-    if (ws.contentItems) STATE.contentItems = ws.contentItems;
-    if (ws.leads) STATE.leads = ws.leads;
-    if (ws.serviceCatalog && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
-    if (ws.settings && Object.keys(ws.settings).length) STATE.settings = { ...STATE.settings, ...ws.settings };
+    if (!ws || typeof ws !== 'object') return;
+    if (Array.isArray(ws.clients)) STATE.clients = ws.clients;
+    if (Array.isArray(ws.packages)) STATE.packages = ws.packages;
+    if (Array.isArray(ws.payments)) STATE.payments = ws.payments;
+    if (Array.isArray(ws.expenses)) STATE.expenses = ws.expenses;
+    if (Array.isArray(ws.staff)) STATE.staff = ws.staff;
+    if (Array.isArray(ws.attendance)) STATE.attendance = ws.attendance;
+    if (Array.isArray(ws.salaryPayments)) STATE.salaryPayments = ws.salaryPayments;
+    if (Array.isArray(ws.tasks)) STATE.tasks = ws.tasks;
+    if (Array.isArray(ws.contentItems)) STATE.contentItems = ws.contentItems;
+    if (Array.isArray(ws.leads)) STATE.leads = ws.leads;
+    if (Array.isArray(ws.serviceCatalog) && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
+    if (ws.settings && typeof ws.settings === 'object' && Object.keys(ws.settings).length) {
+      STATE.settings = { ...STATE.settings, ...ws.settings };
+    }
     saveLocalState();
   }
 };
@@ -1647,16 +1648,22 @@ function queueWorkspaceSync() {
   clearTimeout(_wsSyncTimer);
   _wsSyncTimer = setTimeout(() => {
     AccountiX_API.syncWorkspace(STATE);
-  }, 1000);
+  }, 800);
 }
 
 function saveLocalState() {
   try {
-    const { view, _search, _salesTab, _workTab, _teamTab, _moneyTab, _clientTab, _simTargetProfit, _attDate, _reportTab, ...persistable } = STATE;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
+    const { _search, ...persistable } = STATE;
+    persistable._isSaved = true;
+    const serialized = JSON.stringify(persistable);
+    localStorage.setItem(STORAGE_KEY, serialized);
     const userEmail = (STATE.currentUser && STATE.currentUser.email) ? STATE.currentUser.email.toLowerCase().trim() : '';
     if (userEmail) {
-      localStorage.setItem('accountix_state_' + userEmail, JSON.stringify(persistable));
+      localStorage.setItem('accountix_state_' + userEmail, serialized);
+    }
+    const compId = (STATE.currentUser && STATE.currentUser.companyId) ? STATE.currentUser.companyId : '';
+    if (compId) {
+      localStorage.setItem('accountix_state_comp_' + compId, serialized);
     }
   } catch (e) { console.error('Save failed', e); }
 }
@@ -1667,7 +1674,7 @@ function saveState() {
   queueWorkspaceSync();
 }
 
-async function loadState() {
+function loadStateSync() {
   try {
     let raw = null;
     const token = AccountiX_API.getToken();
@@ -1686,10 +1693,8 @@ async function loadState() {
       raw = localStorage.getItem(STORAGE_KEY);
     }
     if (raw) {
-      Object.assign(STATE, JSON.parse(raw));
-      if (!STATE.clients || !STATE.clients.length) {
-        seedData();
-      }
+      const saved = JSON.parse(raw);
+      Object.assign(STATE, saved);
       if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
         STATE.serviceCatalog = [...DEFAULT_SERVICE_CATALOG];
       }
@@ -1697,26 +1702,67 @@ async function loadState() {
       seedData();
     }
   } catch (e) {
+    console.warn('loadStateSync note:', e);
     seedData();
   }
   if (STATE.settings && STATE.settings.theme) {
     document.documentElement.setAttribute('data-theme', STATE.settings.theme);
   }
+}
+
+async function loadState() {
+  loadStateSync();
+  render();
 
   // Attempt backend JWT session & workspace hydration
   try {
     const me = await AccountiX_API.fetchMe();
     if (me && me.user) {
       console.log('✓ JWT Session Authenticated:', me.user.name);
+      render();
     }
     await AccountiX_API.fetchLogs();
   } catch(e) {}
 
   // If Supabase credentials configured, trigger background sync
   if (isSupabaseConnected()) {
-    syncFromSupabase();
+    try {
+      await syncFromSupabase();
+      render();
+    } catch(e) {}
   }
 }
+
+// Window Unload & Visibility Auto-Save Safety Net
+window.addEventListener('beforeunload', () => {
+  saveLocalState();
+  if (navigator.sendBeacon && STATE.currentUser) {
+    try {
+      const email = (STATE.currentUser.email || '').toLowerCase().trim();
+      const companyId = STATE.currentUser.companyId || 'comp_1';
+      const blob = new Blob([JSON.stringify({
+        email,
+        companyId,
+        clients: STATE.clients || [],
+        packages: STATE.packages || [],
+        payments: STATE.payments || [],
+        expenses: STATE.expenses || [],
+        staff: STATE.staff || [],
+        attendance: STATE.attendance || [],
+        salaryPayments: STATE.salaryPayments || [],
+        tasks: STATE.tasks || [],
+        contentItems: STATE.contentItems || [],
+        leads: STATE.leads || [],
+        serviceCatalog: STATE.serviceCatalog || [],
+        settings: STATE.settings || {}
+      })], { type: 'application/json' });
+      navigator.sendBeacon('/api/workspace/sync', blob);
+    } catch(e) {}
+  }
+});
+window.addEventListener('pagehide', () => {
+  saveLocalState();
+});
 
 function seedData() {
   const ym = currentYM();
