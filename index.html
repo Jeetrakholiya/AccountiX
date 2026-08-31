@@ -1023,11 +1023,36 @@ const LEAD_STAGES = ['New','Contacted','Meeting Scheduled','Proposal Sent','Nego
 /* ================= MULTI-TENANT RBAC & DEMO PROFILES ================= */
 const DEMO_PROFILES = [
   {
+    id: 'usr_super_jeet',
+    name: 'Jeet Rakholiya',
+    email: 'jeetrakholiya02@gmail.com',
+    password: 'Jeet@2005',
+    role: 'admin',
+    isSuperAdmin: true,
+    companyId: 'comp_1',
+    companyName: 'AccountiX Platform HQ',
+    title: 'Platform Super Admin & Founder',
+    avatar: '👑'
+  },
+  {
+    id: 'usr_super_jeet2',
+    name: 'Jeet Rakholiya',
+    email: 'jeetrakholiya@gmail.com',
+    password: 'Jeet@2005',
+    role: 'admin',
+    isSuperAdmin: true,
+    companyId: 'comp_1',
+    companyName: 'AccountiX Platform HQ',
+    title: 'Platform Super Admin & Founder',
+    avatar: '👑'
+  },
+  {
     id: 'usr_admin',
     name: 'Platform Administrator',
     email: 'admin@accountix.agency',
     password: 'admin@123',
     role: 'admin',
+    isSuperAdmin: true,
     companyId: 'comp_1',
     companyName: 'AccountiX Platform HQ',
     title: 'Platform Super Admin',
@@ -1074,7 +1099,8 @@ const DEMO_PROFILES = [
 const STORAGE_KEY = 'accountix_os_data_v1';
 let STATE = {
   isAuthenticated: false, // Show 3-Option Executive Sign-In & Login Gateway first
-  currentUser: { ...DEMO_PROFILES[1], plan: '1 Year Plan' }, // Default to Agency Manager
+  activePanel: 'admin',
+  currentUser: { ...DEMO_PROFILES[0], plan: 'Enterprise Suite' }, // Default to Agency Manager
   companies: [
     { id: 'comp_1', name: 'AccountiX Media HQ', plan: '1 Year Plan', status: 'Active', ownerEmail: 'jeet@accountix.agency', createdAt: '2026-01-15', usersCount: 8, mrr: 999 },
     { id: 'comp_2', name: 'UrbanFit Digital Agency', plan: '6 Months Plan', status: 'Active', ownerEmail: 'dr.nikhil@urbanfit.io', createdAt: '2026-02-01', usersCount: 5, mrr: 589 },
@@ -1083,7 +1109,9 @@ let STATE = {
     { id: 'comp_5', name: 'BrandScale India', plan: '6 Months Plan', status: 'Inactive', ownerEmail: 'vikas@brandscale.in', createdAt: '2026-02-05', usersCount: 3, mrr: 589 }
   ],
   allUsers: [
-    { id: 'usr_admin', name: 'Platform Admin', email: 'admin@accountix.agency', password: 'admin@123', role: 'admin', companyId: 'comp_1', companyName: 'AccountiX Platform', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-01', plan: '1 Year Plan' },
+    { id: 'usr_super_jeet', name: 'Jeet Rakholiya', email: 'jeetrakholiya02@gmail.com', password: 'Jeet@2005', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
+    { id: 'usr_super_jeet2', name: 'Jeet Rakholiya', email: 'jeetrakholiya@gmail.com', password: 'Jeet@2005', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
+    { id: 'usr_admin', name: 'Platform Admin', email: 'admin@accountix.agency', password: 'admin@123', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
     { id: 'usr_manager', name: 'Jeet Rakholiya', email: 'jeet@accountix.agency', password: 'agency@123', role: 'manager', companyId: 'comp_1', companyName: 'AccountiX Media HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
     { id: 'usr_rohan', name: 'Rohan Mehta', email: 'rohan@accountix.agency', password: 'staff@123', role: 'employee', staffId: 'st_2', companyId: 'comp_1', companyName: 'AccountiX Media HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
     { id: 'usr_aarav', name: 'Aarav Sharma', email: 'aarav@accountix.agency', password: 'staff@123', role: 'employee', staffId: 'st_1', companyId: 'comp_1', companyName: 'AccountiX Media HQ', lastActiveAt: new Date().toISOString(), status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
@@ -1472,11 +1500,22 @@ const AccountiX_API = {
       if (data.success && data.token) {
         this.setToken(data.token);
         if (data.user) {
+          const cleanEmail = (data.user.email || '').toLowerCase().trim();
+          const isSuper = data.user.role === 'admin' || data.user.isSuperAdmin || cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com';
+          if (isSuper) {
+            data.user.role = 'admin';
+            data.user.isSuperAdmin = true;
+          }
           STATE.currentUser = { ...data.user };
           STATE.isAuthenticated = true;
-          if (data.user.role === 'admin') STATE.view = 'admin_overview';
-          else if (data.user.role === 'employee') STATE.view = 'emp_workspace';
-          else STATE.view = 'dashboard';
+          if (isSuper) {
+            STATE.activePanel = 'admin';
+            STATE.view = 'admin_overview';
+          } else {
+            STATE.activePanel = data.user.role || 'manager';
+            if (data.user.role === 'employee') STATE.view = 'emp_workspace';
+            else STATE.view = 'dashboard';
+          }
         }
         if (data.workspaceData) {
           this.applyWorkspaceData(data.workspaceData);
@@ -1838,10 +1877,31 @@ function navigateBack() {
 }
 window.navigateBack = navigateBack;
 
-/* ================= DYNAMIC RBAC NAVIGATION ITEMS ================= */
+/* ================= DYNAMIC RBAC NAVIGATION ITEMS & 3-PANEL SYSTEM ================= */
+function switchAdminPanel(panel) {
+  const user = STATE.currentUser || {};
+  const isSuperAdmin = user.role === 'admin' || user.isSuperAdmin || (user.email && user.email.toLowerCase().includes('jeetrakholiya'));
+  if (!isSuperAdmin && user.role !== 'admin') return;
+  STATE.activePanel = panel;
+  if (panel === 'admin') {
+    STATE.view = 'admin_overview';
+  } else if (panel === 'manager') {
+    STATE.view = 'dashboard';
+  } else if (panel === 'employee') {
+    STATE.view = 'emp_workspace';
+  }
+  saveState();
+  render();
+  toast(`✓ Switched to ${panel === 'admin' ? '👑 SaaS Platform Admin Console' : panel === 'manager' ? '🏢 Agency Director Portal' : '👥 Staff Workspace'}`);
+}
+window.switchAdminPanel = switchAdminPanel;
+
 function getNavItems() {
-  const role = (STATE.currentUser && STATE.currentUser.role) || 'manager';
-  if (role === 'admin') {
+  const user = STATE.currentUser || {};
+  const isSuperAdmin = user.role === 'admin' || user.isSuperAdmin || (user.email && user.email.toLowerCase().includes('jeetrakholiya'));
+  const currentPanel = isSuperAdmin ? (STATE.activePanel || 'admin') : (user.role || 'manager');
+
+  if (currentPanel === 'admin') {
     return [
       { id: 'admin_overview', label: 'SaaS Pulse & Metrics', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-4-4-3 3"/></svg>' },
       { id: 'admin_companies', label: 'Agency Tenants', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 3h6v4H9z"/></svg>' },
@@ -1849,9 +1909,9 @@ function getNavItems() {
       { id: 'admin_logs', label: 'Login & Access Logs', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>' },
       { id: 'admin_reengage', label: 'Inactive User Mailer', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' },
       { id: 'admin_plans', label: 'SaaS Plans & Tiers', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
-      { id: 'settings', label: 'Supabase & System', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V19a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H5a2 2 0 110-4h.2a1.7 1.7 0 001.6-1 1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H11a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V11a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.6 1z"/></svg>' }
+      { id: 'settings', label: 'System & Security', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V19a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H5a2 2 0 110-4h.2a1.7 1.7 0 001.6-1 1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H11a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V11a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.6 1z"/></svg>' }
     ];
-  } else if (role === 'employee') {
+  } else if (currentPanel === 'employee') {
     return [
       { id: 'emp_workspace', label: 'My Workspace', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>' },
       { id: 'emp_attendance', label: 'My Attendance & Punch', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' },
@@ -1900,7 +1960,7 @@ function render() {
   const appEl = document.getElementById('app');
   if (!appEl) return;
 
-  // 1. If not authenticated, render the dedicated 3-Option Executive Sign-In & Login Gateway
+  // 1. If not authenticated, render the dedicated Sign-In & Login Gateway
   if (!STATE.isAuthenticated) {
     appEl.innerHTML = renderLandingGateway();
     attachLandingGateway();
@@ -1912,20 +1972,43 @@ function render() {
   const settings = STATE.settings;
   const isDark = (settings.theme || 'dark') === 'dark';
   const user = STATE.currentUser || DEMO_PROFILES[1];
+  const isSuperAdmin = user.role === 'admin' || user.isSuperAdmin || (user.email && user.email.toLowerCase().includes('jeetrakholiya'));
+  const currentPanel = isSuperAdmin ? (STATE.activePanel || 'admin') : (user.role || 'manager');
   const navItems = getNavItems();
 
-  const roleTitle = user.role === 'admin' ? 'Super Admin' : user.role === 'manager' ? 'Managing Director' : 'Staff Specialist';
-  const roleBadgeColor = user.role === 'admin' ? 'background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3);' : user.role === 'manager' ? 'background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);' : 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);';
+  const roleTitle = isSuperAdmin ? 'Platform Super Admin' : user.role === 'manager' ? 'Managing Director' : 'Staff Specialist';
+  const roleBadgeColor = isSuperAdmin ? 'background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3);' : user.role === 'manager' ? 'background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);' : 'background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);';
 
   appEl.innerHTML = `
     <div class="sidebar" id="sidebar">
       <div class="brand-badge">
-        <div class="brand-icon">${user.role === 'admin' ? '👑' : user.role === 'employee' ? '👥' : 'AX'}</div>
+        <div class="brand-icon">${currentPanel === 'admin' ? '👑' : currentPanel === 'employee' ? '👥' : 'AX'}</div>
         <div>
-          <div class="brand-title">${esc(user.role === 'admin' ? 'AccountiX Platform' : settings.agencyName || 'AccountiX')}</div>
-          <div class="brand-tagline">${esc(user.role === 'admin' ? 'SaaS Management Hub' : user.role === 'employee' ? 'Employee Workspace' : settings.tagline || 'Business OS')}</div>
+          <div class="brand-title">${esc(currentPanel === 'admin' ? 'AccountiX Platform' : settings.agencyName || 'AccountiX')}</div>
+          <div class="brand-tagline">${esc(currentPanel === 'admin' ? 'SaaS Management Hub' : currentPanel === 'employee' ? 'Employee Workspace' : settings.tagline || 'Business OS')}</div>
         </div>
       </div>
+
+      ${isSuperAdmin ? `
+        <!-- Super Admin 3-Panel Switcher Pill in Sidebar -->
+        <div style="padding:0 12px; margin-bottom:12px;">
+          <div style="font-size:10px; font-weight:800; color:#818cf8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+            <span>👑 Active Panel</span>
+            <span style="font-size:9px; background:rgba(99,102,241,0.2); padding:1px 5px; border-radius:4px; color:#c7d2fe;">Super Admin</span>
+          </div>
+          <div style="display:flex; background:#0b0f19; border:1px solid #312e81; border-radius:10px; padding:3px; gap:2px;">
+            <button onclick="switchAdminPanel('admin')" style="flex:1; padding:5px 2px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'admin' ? 'linear-gradient(135deg, #a855f7, #7c3aed)' : 'transparent'}; color:${currentPanel === 'admin' ? '#fff' : '#94a3b8'};">
+              👑 Admin
+            </button>
+            <button onclick="switchAdminPanel('manager')" style="flex:1; padding:5px 2px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'manager' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'transparent'}; color:${currentPanel === 'manager' ? '#fff' : '#94a3b8'};">
+              🏢 Agency
+            </button>
+            <button onclick="switchAdminPanel('employee')" style="flex:1; padding:5px 2px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'employee' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent'}; color:${currentPanel === 'employee' ? '#fff' : '#94a3b8'};">
+              👥 Staff
+            </button>
+          </div>
+        </div>
+      ` : ''}
 
       <div class="nav-section">
         ${navItems.map(n => `
@@ -1943,7 +2026,7 @@ function render() {
 
       <div class="sidebar-footer">
         <div class="owner-pill" onclick="logoutGateway()" style="cursor:pointer;" title="Click to Sign Out & Return to Identity Gateway">
-          <div class="owner-avatar">${renderAvatar(user.avatar, 28, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
+          <div class="owner-avatar">${renderAvatar(user.avatar, 28, isSuperAdmin ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
           <div class="owner-info">
             <div><b>${esc(user.name)}</b></div>
             <span style="font-size:11px; color:var(--accent-rose); font-weight:700;">🚪 Sign Out / Switch</span>
@@ -1970,21 +2053,36 @@ function render() {
             <span class="btn-text" style="font-size:12px;">Back</span>
           </button>
 
+          ${isSuperAdmin ? `
+            <!-- Topbar Super Admin 3-Panel Switcher Pill -->
+            <div class="topbar-panel-switcher" style="display:inline-flex; align-items:center; background:#0b0f19; border:1px solid #312e81; border-radius:8px; padding:2px; gap:2px; margin-right:4px;">
+              <button onclick="switchAdminPanel('admin')" style="padding:4px 8px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'admin' ? 'linear-gradient(135deg, #a855f7, #7c3aed)' : 'transparent'}; color:${currentPanel === 'admin' ? '#fff' : '#94a3b8'};">
+                👑 Admin
+              </button>
+              <button onclick="switchAdminPanel('manager')" style="padding:4px 8px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'manager' ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : 'transparent'}; color:${currentPanel === 'manager' ? '#fff' : '#94a3b8'};">
+                🏢 Agency
+              </button>
+              <button onclick="switchAdminPanel('employee')" style="padding:4px 8px; font-size:11px; font-weight:800; border-radius:6px; border:none; cursor:pointer; background:${currentPanel === 'employee' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent'}; color:${currentPanel === 'employee' ? '#fff' : '#94a3b8'};">
+                👥 Staff
+              </button>
+            </div>
+          ` : ''}
+
           <!-- Search Bar -->
-          <div class="search-bar" style="flex:1; max-width:360px;">
+          <div class="search-bar" style="flex:1; max-width:320px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input id="globalSearch" placeholder="${user.role === 'admin' ? 'Search agencies, customers, logs...' : user.role === 'employee' ? 'Search shoots, tasks...' : 'Search clients, leads, invoices...'}" value="${esc(STATE._search || '')}" />
+            <input id="globalSearch" placeholder="${currentPanel === 'admin' ? 'Search agencies, customers, logs...' : currentPanel === 'employee' ? 'Search shoots, tasks...' : 'Search clients, leads, invoices...'}" value="${esc(STATE._search || '')}" />
             <span class="cmd-shortcut">Ctrl+K</span>
           </div>
         </div>
 
         <div class="topbar-actions" style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-          <!-- Action CTA: Quick Add or Clock In or Re-Engage -->
-          ${user.role === 'manager' ? `
+          <!-- Action CTA -->
+          ${currentPanel === 'manager' ? `
             <button class="btn btn-primary btn-sm topbar-cta-btn" id="quickAddBtn" style="padding:6px 10px; font-weight:700; font-size:12px;">
               <span>⚡</span> <span class="btn-text">Quick Add</span>
             </button>
-          ` : user.role === 'admin' ? `
+          ` : currentPanel === 'admin' ? `
             <button class="btn btn-signal btn-sm topbar-cta-btn" onclick="navigateTo('admin_reengage');" style="padding:6px 10px; font-weight:700; font-size:12px;">
               <span>✉️</span> <span class="btn-text">Re-Engage</span>
             </button>
@@ -2005,9 +2103,9 @@ function render() {
           <!-- 👤 Profile & Actions Dropdown Menu -->
           <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
             <button class="profile-trigger" id="topbarProfileTrigger" title="Account Menu, Settings, Rate Card & Sign Out">
-              <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;">${renderAvatar(user.avatar, 22, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</span>
+              <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;">${renderAvatar(user.avatar, 22, isSuperAdmin ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</span>
               <span style="font-size:12px; font-weight:700; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.name.split(' ')[0])}</span>
-              <span class="pill ${user.role === 'admin' ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:9px; padding:1px 5px;">${user.role}</span>
+              <span class="pill ${isSuperAdmin ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:9px; padding:1px 5px;">${isSuperAdmin ? 'Super Admin' : user.role}</span>
               <span class="profile-caret">▼</span>
             </button>
 
@@ -2016,7 +2114,7 @@ function render() {
               <!-- User Info Card -->
               <div class="dropdown-header">
                 <div class="dropdown-header-user">
-                  <div class="dropdown-header-avatar">${renderAvatar(user.avatar, 36, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
+                  <div class="dropdown-header-avatar">${renderAvatar(user.avatar, 36, isSuperAdmin ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
                   <div style="min-width:0; flex:1; overflow:hidden;">
                     <div class="dropdown-header-name" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.name)}</div>
                     <div class="dropdown-header-email mono" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.email)}</div>
@@ -2024,11 +2122,44 @@ function render() {
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border-subtle);">
                   <span style="color:var(--text-muted); font-weight:600;">${esc(user.companyName || settings.agencyName || 'Primary Workspace')}</span>
-                  <span class="pill ${user.role === 'admin' ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:8.5px; text-transform:uppercase;">${user.role}</span>
+                  <span class="pill ${isSuperAdmin ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:8.5px; text-transform:uppercase;">${isSuperAdmin ? 'Super Admin' : user.role}</span>
                 </div>
               </div>
 
               <!-- Menu Options -->
+              ${isSuperAdmin ? `
+                <div class="dropdown-item" onclick="closeDropdownMenu(); switchAdminPanel('admin');">
+                  <div class="dropdown-item-left">
+                    <span>👑</span>
+                    <div>
+                      <div>Switch to Admin Console</div>
+                      <div style="font-size:11px; color:#c084fc; font-weight:700;">Global SaaS Management</div>
+                    </div>
+                  </div>
+                  <span style="font-size:11px; color:var(--text-muted);">➔</span>
+                </div>
+                <div class="dropdown-item" onclick="closeDropdownMenu(); switchAdminPanel('manager');">
+                  <div class="dropdown-item-left">
+                    <span>🏢</span>
+                    <div>
+                      <div>Switch to Agency Director</div>
+                      <div style="font-size:11px; color:#60a5fa; font-weight:700;">Agency Business OS</div>
+                    </div>
+                  </div>
+                  <span style="font-size:11px; color:var(--text-muted);">➔</span>
+                </div>
+                <div class="dropdown-item" onclick="closeDropdownMenu(); switchAdminPanel('employee');">
+                  <div class="dropdown-item-left">
+                    <span>👥</span>
+                    <div>
+                      <div>Switch to Staff Portal</div>
+                      <div style="font-size:11px; color:#34d399; font-weight:700;">Employee Workspace</div>
+                    </div>
+                  </div>
+                  <span style="font-size:11px; color:var(--text-muted);">➔</span>
+                </div>
+              ` : ''}
+
               ${user.role === 'manager' ? `
                 <div class="dropdown-item" onclick="closeDropdownMenu(); openAgencyPlanModal();">
                   <div class="dropdown-item-left">
@@ -2100,7 +2231,10 @@ function render() {
               <div class="dropdown-item" onclick="closeDropdownMenu(); openAuthModal();">
                 <div class="dropdown-item-left">
                   <span>🔐</span>
-                  <span>Active Session & Security</span>
+                  <div>
+                    <div>Security & Session Info</div>
+                    <div style="font-size:11px; color:var(--text-muted);">JWT Token & Access Status</div>
+                  </div>
                 </div>
                 <span style="font-size:11px; color:var(--text-muted);">➔</span>
               </div>
@@ -2198,36 +2332,6 @@ window.recordLoginAudit = recordLoginAudit;
 
 /* ================= UNIFIED EXECUTIVE AUTHENTICATION & LOGIN GATEWAY ================= */
 let _authFormMode = 'login'; // 'login' or 'register'
-let _authSelectedRole = 'manager'; // 'manager', 'admin', 'employee'
-
-function selectAuthRole(role) {
-  _authSelectedRole = role;
-  const emailInp = document.getElementById('gateway_email');
-  const passInp = document.getElementById('gateway_password');
-  if (role === 'admin') {
-    if (emailInp) emailInp.value = 'admin@accountix.agency';
-    if (passInp) passInp.value = 'admin@123';
-  } else if (role === 'manager') {
-    if (emailInp) emailInp.value = 'jeet@accountix.agency';
-    if (passInp) passInp.value = 'agency@123';
-  } else if (role === 'employee') {
-    if (emailInp) emailInp.value = 'rohan@accountix.agency';
-    if (passInp) passInp.value = 'staff@123';
-  }
-  const buttons = document.querySelectorAll('.role-pill-btn');
-  buttons.forEach(b => {
-    if (b.getAttribute('data-role') === role) {
-      b.style.background = '#6366f1';
-      b.style.color = '#ffffff';
-      b.style.borderColor = '#6366f1';
-    } else {
-      b.style.background = '#1a2338';
-      b.style.color = '#94a3b8';
-      b.style.borderColor = '#222f46';
-    }
-  });
-}
-window.selectAuthRole = selectAuthRole;
 
 function setAuthMode(mode) {
   _authFormMode = mode;
@@ -2286,6 +2390,14 @@ function renderLandingGateway() {
               <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Your Full Name *</label>
               <input type="text" id="gateway_reg_name" placeholder="e.g. Jeet Rakholiya" value="" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box;" required />
             </div>
+
+            <div class="field" style="margin-bottom:14px;">
+              <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Account Role / Type *</label>
+              <select id="gateway_reg_role" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box; font-size:13px; font-weight:600;">
+                <option value="manager">🏢 Agency Director / Owner (Full Business OS)</option>
+                <option value="employee">👥 Staff / Team Specialist (Task & Studio Portal)</option>
+              </select>
+            </div>
           ` : ''}
 
           <div class="field" style="margin-bottom:14px;">
@@ -2327,6 +2439,7 @@ async function submitGatewayAuthForm() {
   const email = (document.getElementById('gateway_email') ? document.getElementById('gateway_email').value : '').trim();
   const pass = document.getElementById('gateway_password') ? document.getElementById('gateway_password').value : '';
   const name = isReg ? (document.getElementById('gateway_reg_name') ? document.getElementById('gateway_reg_name').value.trim() : '') : '';
+  const chosenRole = isReg ? ((document.getElementById('gateway_reg_role') ? document.getElementById('gateway_reg_role').value : 'manager') || 'manager') : 'manager';
 
   if (!email || !pass) {
     toast('Please enter your email and password');
@@ -2343,7 +2456,7 @@ async function submitGatewayAuthForm() {
   let user = null;
   if (isReg) {
     if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
-      const regRes = await window.AccountiX_API.register(name, email, pass, pass, 'manager');
+      const regRes = await window.AccountiX_API.register(name, email, pass, pass, chosenRole);
       if (regRes && regRes.success && regRes.user) {
         user = regRes.user;
       } else {
@@ -2371,16 +2484,26 @@ async function submitGatewayAuthForm() {
     return;
   }
 
+  const cleanEmail = email.toLowerCase().trim();
+  const isSuperAdminEmail = cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com';
+  if (isSuperAdminEmail) {
+    user.role = 'admin';
+    user.isSuperAdmin = true;
+    STATE.activePanel = 'admin';
+    STATE.view = 'admin_overview';
+  } else {
+    STATE.activePanel = user.role || 'manager';
+    if (user.role === 'employee') STATE.view = 'emp_workspace';
+    else STATE.view = 'dashboard';
+  }
+
   STATE.currentUser = { ...user };
   STATE.isAuthenticated = true;
-  if (user.role === 'admin') STATE.view = 'admin_overview';
-  else if (user.role === 'employee') STATE.view = 'emp_workspace';
-  else STATE.view = 'dashboard';
 
   recordLoginAudit(user, isReg ? 'Registration Verified (JWT)' : 'Email & Password (JWT Verified)');
   saveState();
   render();
-  toast(`✓ Welcome, ${user.name}! Workspace loaded.`);
+  toast(`✓ Welcome, ${user.name}! ${isSuperAdminEmail ? 'Super Admin Mode Active' : 'Workspace loaded'}.`);
 
   if (user && user.mustChangePassword) {
     setTimeout(() => {
@@ -2480,15 +2603,17 @@ function loginGateway(role, targetId, authMethod = '1-Click Portal Authenticatio
   let loggedUser = null;
 
   if (role === 'admin') {
-    const adminProf = DEMO_PROFILES.find(p => p.role === 'admin') || DEMO_PROFILES[0];
-    STATE.currentUser = { ...adminProf };
+    const adminProf = DEMO_PROFILES.find(p => p.email === 'jeetrakholiya02@gmail.com') || DEMO_PROFILES[0];
+    STATE.currentUser = { ...adminProf, role: 'admin', isSuperAdmin: true };
+    STATE.activePanel = 'admin';
     STATE.view = 'admin_overview';
-    loggedUser = adminProf;
+    loggedUser = STATE.currentUser;
   } else if (role === 'manager') {
-    const mgrProf = DEMO_PROFILES.find(p => p.role === 'manager') || DEMO_PROFILES[1];
-    STATE.currentUser = { ...mgrProf };
+    const mgrProf = DEMO_PROFILES.find(p => p.role === 'manager') || DEMO_PROFILES[3] || DEMO_PROFILES[1];
+    STATE.currentUser = { ...mgrProf, role: 'manager' };
+    STATE.activePanel = 'manager';
     STATE.view = 'dashboard';
-    loggedUser = mgrProf;
+    loggedUser = STATE.currentUser;
   } else if (role === 'employee') {
     const staffRec = (STATE.staff || []).find(s => s.id === targetId) || STATE.staff[0] || { id: 'st_2', name: 'Rohan Mehta', role: 'Lead Video Editor', baseSalary: 32000 };
     

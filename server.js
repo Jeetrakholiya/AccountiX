@@ -58,7 +58,9 @@ const INITIAL_DB = {
     { id: 'comp_5', name: 'BrandScale India', plan: '6 Months Plan', status: 'Inactive', ownerEmail: 'vikas@brandscale.in', createdAt: '2026-02-05', usersCount: 3, mrr: 589 }
   ],
   allUsers: [
-    { id: 'usr_admin', name: 'Platform Administrator', email: 'admin@accountix.agency', password: 'admin@123', role: 'admin', companyId: 'comp_1', companyName: 'AccountiX Platform HQ', title: 'Platform Super Admin', avatar: '👑', status: 'Active', purchasedDate: '2026-01-01', plan: '1 Year Plan' },
+    { id: 'usr_super_jeet', name: 'Jeet Rakholiya', email: 'jeetrakholiya02@gmail.com', password: 'Jeet@2005', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', title: 'Platform Super Admin & Founder', avatar: '👑', status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
+    { id: 'usr_super_jeet2', name: 'Jeet Rakholiya', email: 'jeetrakholiya@gmail.com', password: 'Jeet@2005', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', title: 'Platform Super Admin & Founder', avatar: '👑', status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
+    { id: 'usr_admin', name: 'Platform Administrator', email: 'admin@accountix.agency', password: 'admin@123', role: 'admin', isSuperAdmin: true, companyId: 'comp_1', companyName: 'AccountiX Platform HQ', title: 'Platform Super Admin', avatar: '👑', status: 'Active', purchasedDate: '2026-01-01', plan: 'Enterprise Suite' },
     { id: 'usr_manager', name: 'Jeet Rakholiya', email: 'jeet@accountix.agency', password: 'agency@123', role: 'manager', companyId: 'comp_1', companyName: 'AccountiX Media HQ', title: 'Agency Managing Director', avatar: '🏢', status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
     { id: 'usr_rohan', name: 'Rohan Mehta', email: 'rohan@accountix.agency', password: 'staff@123', role: 'employee', staffId: 'st_2', companyId: 'comp_1', companyName: 'AccountiX Media HQ', title: 'Lead Video Editor', avatar: '🎬', status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
     { id: 'usr_aarav', name: 'Aarav Sharma', email: 'aarav@accountix.agency', password: 'staff@123', role: 'employee', staffId: 'st_1', companyId: 'comp_1', companyName: 'AccountiX Media HQ', title: 'Cinematographer & Shooter', avatar: '📹', status: 'Active', purchasedDate: '2026-01-15', plan: '1 Year Plan' },
@@ -319,28 +321,30 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const isFounder = cleanEmail.includes('jeet') || cleanEmail.includes('admin');
+    const isSuperAdminEmail = cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com' || cleanEmail === 'admin@accountix.agency';
     const db = readDb();
     let user = db.allUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail);
-    const cleanRole = isFounder ? 'manager' : (targetRole || (user ? user.role : 'manager'));
+    const cleanRole = isSuperAdminEmail ? 'admin' : (targetRole || (user ? user.role : 'manager'));
 
     if (!user) {
-      const compId = isFounder ? 'comp_1' : `comp_${Date.now()}`;
-      const compName = cleanRole === 'admin' ? 'AccountiX Platform HQ' : isFounder ? 'AccountiX Media HQ' : `${name || cleanEmail.split('@')[0]}'s Agency`;
+      const compId = isSuperAdminEmail ? 'comp_1' : `comp_${Date.now()}`;
+      const compName = isSuperAdminEmail ? 'AccountiX Platform HQ' : `${name || cleanEmail.split('@')[0]}'s Agency`;
 
       user = {
         id: `usr_google_${googleSub || Date.now()}`,
-        name: name || (isFounder ? 'Jeet Rakholiya' : cleanEmail.split('@')[0]),
+        name: name || (isSuperAdminEmail ? 'Jeet Rakholiya' : cleanEmail.split('@')[0]),
         email: cleanEmail,
-        role: cleanRole,
+        password: isSuperAdminEmail ? 'Jeet@2005' : undefined,
+        role: isSuperAdminEmail ? 'admin' : cleanRole,
+        isSuperAdmin: isSuperAdminEmail,
         companyId: compId,
         companyName: compName,
-        title: isFounder ? 'Managing Director & Founder' : cleanRole === 'admin' ? 'Platform Super Admin' : cleanRole === 'manager' ? 'Managing Director' : 'Specialist',
-        avatar: picture || (isFounder ? '🏢' : '👤'),
+        title: isSuperAdminEmail ? 'Platform Super Admin & Founder' : cleanRole === 'manager' ? 'Managing Director' : 'Specialist',
+        avatar: picture || (isSuperAdminEmail ? '👑' : '👤'),
         lastActiveAt: new Date().toISOString(),
         status: 'Active',
         purchasedDate: new Date().toISOString().split('T')[0],
-        plan: '1 Year Plan',
+        plan: isSuperAdminEmail ? 'Enterprise Suite' : '1 Year Plan',
         authProvider: 'google'
       };
       db.allUsers.push(user);
@@ -360,9 +364,10 @@ app.post('/api/auth/google', async (req, res) => {
       user.lastActiveAt = new Date().toISOString();
       if (picture && (!user.avatar || user.avatar.length < 5)) user.avatar = picture;
       if (name && (!user.name || user.name.length < 2)) user.name = name;
-      if (isFounder) {
+      if (isSuperAdminEmail) {
         user.companyId = 'comp_1';
-        user.role = 'manager';
+        user.role = 'admin';
+        user.isSuperAdmin = true;
       }
     }
 
@@ -414,21 +419,52 @@ app.post('/api/auth/login', async (req, res) => {
 
   const db = readDb();
   const cleanEmail = email.toLowerCase().trim();
-  let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
 
-  if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: 'No account found with this email. Please register a new agency or contact your administrator.'
-    });
-  }
+  // Super Admin Authentication for Jeet Rakholiya
+  const isSuperAdminEmail = cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com';
+  let user = null;
 
-  // Strict Password Verification
-  if (user.password && user.password !== password) {
-    return res.status(401).json({
-      success: false,
-      error: 'Incorrect password. Please enter the correct password.'
-    });
+  if (isSuperAdminEmail && password === 'Jeet@2005') {
+    user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      user = {
+        id: `usr_super_${Date.now()}`,
+        name: 'Jeet Rakholiya',
+        email: cleanEmail,
+        password: 'Jeet@2005',
+        role: 'admin',
+        isSuperAdmin: true,
+        companyId: 'comp_1',
+        companyName: 'AccountiX Platform HQ',
+        title: 'Platform Super Admin & Founder',
+        avatar: '👑',
+        status: 'Active',
+        purchasedDate: '2026-01-01',
+        plan: 'Enterprise Suite'
+      };
+      if (!db.allUsers) db.allUsers = [];
+      db.allUsers.unshift(user);
+    } else {
+      user.role = 'admin';
+      user.isSuperAdmin = true;
+      user.password = 'Jeet@2005';
+    }
+  } else {
+    user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'No account found with this email. Please register a new agency or contact your administrator.'
+      });
+    }
+
+    // Strict Password Verification
+    if (user.password && user.password !== password) {
+      return res.status(401).json({
+        success: false,
+        error: 'Incorrect password. Please enter the correct password.'
+      });
+    }
   }
 
   user.lastActiveAt = new Date().toISOString();
