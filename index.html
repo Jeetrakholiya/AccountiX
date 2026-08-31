@@ -2778,7 +2778,6 @@ function toggleTheme() {
 
 /* ================= GOOGLE CLOUD CONSOLE (OAUTH 2.0) AUTHENTICATION ================= */
 async function signInWithGoogle(targetRole = 'manager') {
-  // 1. Check if Google Client ID is configured in state, localStorage, or backend
   let clientId = (STATE.settings && STATE.settings.googleClientId) || localStorage.getItem('accountix_google_client_id') || '';
   
   if (!clientId && window.AccountiX_API) {
@@ -2788,39 +2787,42 @@ async function signInWithGoogle(targetRole = 'manager') {
     } catch(e) {}
   }
 
-  // 2. If Google Identity Services (GIS) is available and Client ID is set
+  // 1. If Google Identity Services (GIS) is available and Client ID is set
   if (clientId && window.google && window.google.accounts && window.google.accounts.id) {
-    toast('Initializing Google Cloud Sign-In...');
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: async (response) => {
-        if (response && response.credential) {
-          toast('Verifying Google Token with Backend Engine... ⏳');
-          const loginResult = await AccountiX_API.googleLogin(response.credential, null, targetRole);
-          if (loginResult && loginResult.success) {
-            closeModal();
-            render();
-            toast(`✓ Google Authentication verified! Welcome, ${loginResult.user.name}.`);
-          } else {
-            toast('⚠️ Google Auth Error: ' + (loginResult.error || 'Failed to authenticate'));
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response) => {
+          if (response && response.credential) {
+            toast('Verifying Google Token with Backend Engine... ⏳');
+            const loginResult = await AccountiX_API.googleLogin(response.credential, null, targetRole);
+            if (loginResult && loginResult.success) {
+              closeModal();
+              render();
+              toast(`✓ Google Authentication verified! Welcome, ${loginResult.user.name}.`);
+            } else {
+              toast('⚠️ Google Auth Error: ' + (loginResult.error || 'Failed to authenticate'));
+            }
           }
         }
-      }
-    });
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        openGoogleAuthSetupModal(targetRole, clientId);
-      }
-    });
-    return;
+      });
+      window.google.accounts.id.prompt((notification) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          openGoogleSignInModal(targetRole);
+        }
+      });
+      return;
+    } catch (e) {
+      console.warn('GIS prompt note:', e);
+    }
   }
 
-  // 3. Otherwise, open the interactive Google Cloud Console setup & quick-sign modal
-  openGoogleAuthSetupModal(targetRole, clientId);
+  // 2. Otherwise, open the clean, modern user-facing Google Sign-In card
+  openGoogleSignInModal(targetRole);
 }
 window.signInWithGoogle = signInWithGoogle;
 
-function openGoogleAuthSetupModal(targetRole = 'manager', existingClientId = '') {
+function openGoogleSignInModal(targetRole = 'manager') {
   showModal(`
     <div class="modal-header">
       <div style="display:flex; align-items:center; gap:10px;">
@@ -2831,62 +2833,42 @@ function openGoogleAuthSetupModal(targetRole = 'manager', existingClientId = '')
           <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
         </svg>
         <div>
-          <h3 class="modal-title">Google Cloud Console Authentication</h3>
-          <div style="font-size:12px; color:var(--text-muted);">OAuth 2.0 Client ID Verification for AccountiX</div>
+          <h3 class="modal-title">Sign In with Google</h3>
+          <div style="font-size:12px; color:var(--text-muted);">Instant verified access to AccountiX Workspace</div>
         </div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
-    <!-- Quick Sign-In Options -->
-    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:16px; margin-bottom:18px;">
-      <div style="font-size:13px; font-weight:700; color:var(--text-primary); margin-bottom:6px;">🚀 Quick Google Email Verification</div>
-      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Sign in with your Google account credentials to issue a verified JWT session:</div>
-      <div class="field" style="margin-bottom:10px;">
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:14px; padding:20px; margin-bottom:16px;">
+      <div class="field" style="margin-bottom:14px;">
         <label>Google Account Email ID *</label>
-        <input type="email" id="f_google_quick_email" placeholder="e.g. yourname@gmail.com" value="${STATE.currentUser ? STATE.currentUser.email : ''}" autofocus />
+        <input type="email" id="f_google_quick_email" placeholder="e.g. yourname@gmail.com" value="${(STATE.currentUser && STATE.currentUser.email) ? STATE.currentUser.email : ''}" required autofocus />
       </div>
-      <div class="field" style="margin-bottom:12px;">
-        <label>Google Account Full Name</label>
-        <input type="text" id="f_google_quick_name" placeholder="e.g. Jeet Rakholiya" value="${STATE.currentUser ? STATE.currentUser.name : ''}" />
+      <div class="field" style="margin-bottom:18px;">
+        <label>Full Name (Optional)</label>
+        <input type="text" id="f_google_quick_name" placeholder="e.g. Rohan Mehta" value="${(STATE.currentUser && STATE.currentUser.name) ? STATE.currentUser.name : ''}" />
       </div>
-      <button class="btn btn-primary" id="btnGoogleQuickLogin" style="width:100%; justify-content:center; padding:10px; font-weight:800;">
-        Sign In with Google Account ➔
+
+      <button class="btn btn-primary" id="btnGoogleQuickLogin" style="width:100%; justify-content:center; padding:12px; font-weight:800; font-size:14px; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+        Continue to Workspace ➔
       </button>
     </div>
 
-    <!-- Google Cloud Console Credentials Setup Card -->
-    <div style="background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.25); border-radius:12px; padding:16px; margin-bottom:18px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <div style="font-size:13px; font-weight:700; color:var(--brand);">⚙️ Google Cloud Console (OAuth 2.0 Client ID)</div>
-        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn btn-ghost btn-sm" style="font-size:11px; padding:3px 8px;">Open Console ↗</a>
-      </div>
-      <div style="font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:12px;">
-        To connect your live <b>OAuth 2.0 Web Client</b> directly from <code style="color:var(--brand); font-weight:700;">console.cloud.google.com</code>, paste your Client ID below:
-      </div>
-      <div class="field" style="margin-bottom:10px;">
-        <label>Google OAuth 2.0 Client ID</label>
-        <input id="f_google_client_id_input" placeholder="e.g. 1234567890-abcdef.apps.googleusercontent.com" value="${esc(existingClientId)}" />
-      </div>
-      <button class="btn btn-signal btn-sm" id="btnSaveGoogleClientId" style="width:100%; justify-content:center;">
-        Save Google Client ID & Enable GIS
-      </button>
+    <div class="modal-actions" style="border-top:1px solid var(--border-subtle); padding-top:12px; margin-top:0;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    </div>
-  `, 580);
+  `, 480);
 
   document.getElementById('btnGoogleQuickLogin').onclick = async () => {
-    const email = document.getElementById('f_google_quick_email').value.trim();
-    const name = document.getElementById('f_google_quick_name').value.trim();
+    const email = (document.getElementById('f_google_quick_email').value || '').trim();
+    const name = (document.getElementById('f_google_quick_name').value || '').trim();
     if (!email) {
       toast('Please enter your Google account email');
       return;
     }
     const btn = document.getElementById('btnGoogleQuickLogin');
-    if (btn) btn.innerHTML = 'Verifying Google Session... ⏳';
+    if (btn) btn.innerHTML = 'Signing In... ⏳';
 
     const loginRes = await AccountiX_API.googleLogin(null, { email, name, avatar: '🌐' }, targetRole);
     if (loginRes && loginRes.success) {
@@ -2897,22 +2879,9 @@ function openGoogleAuthSetupModal(targetRole = 'manager', existingClientId = '')
       toast('Google Auth error: ' + (loginRes.error || 'Failed to authenticate'));
     }
   };
-
-  document.getElementById('btnSaveGoogleClientId').onclick = () => {
-    const idVal = document.getElementById('f_google_client_id_input').value.trim();
-    if (idVal) {
-      if (!STATE.settings) STATE.settings = {};
-      STATE.settings.googleClientId = idVal;
-      localStorage.setItem('accountix_google_client_id', idVal);
-      saveState();
-      toast('✓ Google Client ID saved successfully!');
-      closeModal();
-      signInWithGoogle(targetRole);
-    } else {
-      toast('Please paste a valid Google Client ID');
-    }
-  };
 }
+window.openGoogleSignInModal = openGoogleSignInModal;
+window.openGoogleAuthSetupModal = openGoogleSignInModal;
 window.openGoogleAuthSetupModal = openGoogleAuthSetupModal;
 
 function openAuthModal() {
