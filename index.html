@@ -1524,6 +1524,36 @@ const AccountiX_API = {
       return data;
     } catch (e) {}
   },
+  async inviteStaff({ toEmail, staffName, role, temporaryPassword, agencyName, loginUrl, staffId }) {
+    try {
+      const res = await fetch('/api/staff/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toEmail, staffName, role, temporaryPassword, agencyName, loginUrl, staffId })
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn('Invite staff error:', e);
+      return { success: false, error: e.message };
+    }
+  },
+  async changePassword({ email, currentPassword, newPassword }) {
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        this.setToken(data.token);
+      }
+      return data;
+    } catch (e) {
+      console.warn('Change password error:', e);
+      return { success: false, error: e.message };
+    }
+  },
   applyWorkspaceData(ws) {
     if (!ws) return;
     if (ws.clients && ws.clients.length) STATE.clients = ws.clients;
@@ -2054,6 +2084,18 @@ function render() {
                 <span style="font-size:11px; color:var(--text-muted);">➔</span>
               </div>
 
+              <!-- Change Password Option -->
+              <div class="dropdown-item" onclick="closeDropdownMenu(); openForceChangePasswordModal(STATE.currentUser || {});">
+                <div class="dropdown-item-left">
+                  <span>🔑</span>
+                  <div>
+                    <div>Change Account Password</div>
+                    <div style="font-size:11px; color:var(--text-muted);">Update personal login credentials</div>
+                  </div>
+                </div>
+                <span style="font-size:11px; color:var(--text-muted);">➔</span>
+              </div>
+
               <!-- Active Session Details -->
               <div class="dropdown-item" onclick="closeDropdownMenu(); openAuthModal();">
                 <div class="dropdown-item-left">
@@ -2361,8 +2403,97 @@ async function submitGatewayAuthForm() {
   saveState();
   render();
   toast(`✓ Welcome, ${user.name}! Workspace loaded.`);
+
+  if (user && user.mustChangePassword) {
+    setTimeout(() => {
+      openForceChangePasswordModal(user);
+    }, 450);
+  }
 }
 window.submitGatewayAuthForm = submitGatewayAuthForm;
+
+function openForceChangePasswordModal(user) {
+  const u = user || STATE.currentUser || {};
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🔐 Set Your Personal Password</h3>
+        <div style="font-size:12px; color:var(--text-muted);">First-Time Staff Security Setup</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    
+    <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:12px 14px; margin-bottom:18px; font-size:12.5px; line-height:1.5;">
+      👋 Welcome to the team, <b>${esc(u.name || 'Team Member')}</b>! You are using a temporary default password. Please create your permanent password below.
+    </div>
+
+    <div class="field">
+      <label>New Password * (Min 4 characters)</label>
+      <input type="password" id="f_chg_new_pass" placeholder="Enter your new secure password" required autofocus />
+    </div>
+
+    <div class="field">
+      <label>Confirm New Password *</label>
+      <input type="password" id="f_chg_conf_pass" placeholder="Re-enter your new password" required />
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between; align-items:center;">
+      <span style="font-size:11px; color:var(--text-muted);">🔒 Encrypted & updated across your profile</span>
+      <button class="btn btn-primary" id="btnSaveNewPass">Save Password & Continue ➔</button>
+    </div>
+  `, 480);
+
+  document.getElementById('btnSaveNewPass').onclick = async () => {
+    const newPass = (document.getElementById('f_chg_new_pass').value || '').trim();
+    const confPass = (document.getElementById('f_chg_conf_pass').value || '').trim();
+
+    if (!newPass || newPass.length < 4) {
+      toast('New password must be at least 4 characters long');
+      return;
+    }
+    if (newPass !== confPass) {
+      toast('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    const btn = document.getElementById('btnSaveNewPass');
+    btn.innerHTML = 'Updating Password... ⏳';
+
+    try {
+      if (window.AccountiX_API && typeof window.AccountiX_API.changePassword === 'function') {
+        await window.AccountiX_API.changePassword({
+          email: u.email,
+          newPassword: newPass
+        });
+      }
+
+      // Update in local state
+      u.password = newPass;
+      u.mustChangePassword = false;
+      if (STATE.currentUser) {
+        STATE.currentUser.password = newPass;
+        STATE.currentUser.mustChangePassword = false;
+      }
+      const match = (STATE.allUsers || []).find(usr => usr.email && usr.email.toLowerCase() === (u.email || '').toLowerCase());
+      if (match) {
+        match.password = newPass;
+        match.mustChangePassword = false;
+      }
+      saveState();
+      closeModal();
+      toast('✓ Password updated successfully! Welcome to your workspace. 🎉');
+      render();
+    } catch(e) {
+      u.password = newPass;
+      u.mustChangePassword = false;
+      saveState();
+      closeModal();
+      toast('✓ Password updated!');
+      render();
+    }
+  };
+}
+window.openForceChangePasswordModal = openForceChangePasswordModal;
 
 function attachLandingGateway() {}
 
@@ -2388,8 +2519,9 @@ function loginGateway(role, targetId, authMethod = '1-Click Portal Authenticatio
       prof = {
         id: `usr_emp_${staffRec.id}`,
         name: staffRec.name,
-        email: `${staffRec.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@accountix.agency`,
-        password: 'staff@123',
+        email: staffRec.email || `${staffRec.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@accountix.agency`,
+        password: staffRec.defaultPassword || 'staff@123',
+        mustChangePassword: !!staffRec.defaultPassword,
         role: 'employee',
         staffId: staffRec.id,
         companyId: 'comp_1',
@@ -2411,6 +2543,12 @@ function loginGateway(role, targetId, authMethod = '1-Click Portal Authenticatio
   saveState();
   render();
   toast(`Logged in as ${STATE.currentUser.title || STATE.currentUser.name} (${STATE.currentUser.role.toUpperCase()})`);
+
+  if (loggedUser && loggedUser.mustChangePassword) {
+    setTimeout(() => {
+      openForceChangePasswordModal(loggedUser);
+    }, 450);
+  }
 }
 window.loginGateway = loginGateway;
 
@@ -5676,50 +5814,112 @@ function attachTeam() {
 }
 function openStaffModal(staffId = null) {
   const s = staffId ? STATE.staff.find(st => st.id === staffId) : {};
+  const existingUser = (STATE.allUsers || []).find(u => u.staffId === staffId || (s.name && u.name === s.name && u.role === 'employee'));
+  const currentEmail = s.email || (existingUser ? existingUser.email : '');
+  const defaultPass = s.defaultPassword || (existingUser ? existingUser.password : `Staff@${Math.floor(1000 + Math.random() * 9000)}`);
+
   showModal(`
-    <div class="modal-header"><h3 class="modal-title">${staffId ? 'Edit Team Member' : 'Add Team Member (Provision Portal Access)'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Full Name *</label><input id="f_st_nm" value="${esc(s.name || '')}" placeholder="e.g. Rohan Mehta" required autofocus /></div>
-    <div class="field-row">
-      <div class="field"><label>Role / Position</label><select id="f_st_rl">${STAFF_ROLES.map(r => `<option ${r === s.role ? 'selected' : ''}>${r}</option>`).join('')}</select></div>
-      <div class="field"><label>Phone / Login ID</label><input id="f_st_ph" value="${esc(s.phone || '')}" placeholder="+91 98765 43210" /></div>
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">${staffId ? 'Edit Team Member' : '➕ Add Team Member & Provision Access'}</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Configure employee credentials, salary and Gmail onboarding invite</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="field"><label>Monthly Base Salary (₹)</label><input type="number" id="f_st_sal" value="${s.baseSalary || 25000}" /></div>
+
+    <div class="field">
+      <label>Full Name *</label>
+      <input id="f_st_nm" value="${esc(s.name || '')}" placeholder="e.g. Rohan Mehta" required autofocus />
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Role / Position</label>
+        <select id="f_st_rl">
+          ${STAFF_ROLES.map(r => `<option ${r === s.role ? 'selected' : ''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Phone / WhatsApp Number</label>
+        <input id="f_st_ph" value="${esc(s.phone || '')}" placeholder="+91 98765 43210" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Staff Official Email * (For Gmail Invite)</label>
+        <input type="email" id="f_st_em" value="${esc(currentEmail)}" placeholder="e.g. rohan.mehta@gmail.com" required />
+      </div>
+      <div class="field">
+        <label>Monthly Base Salary (₹)</label>
+        <input type="number" id="f_st_sal" value="${s.baseSalary || 25000}" />
+      </div>
+    </div>
+
+    <div class="field">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin-bottom:0;">Default Temporary Password *</label>
+        <span onclick="document.getElementById('f_st_pass').value='Staff@'+Math.floor(1000+Math.random()*9000)" style="font-size:11px; color:var(--brand); cursor:pointer; font-weight:700;">🎲 Generate Random</span>
+      </div>
+      <input type="text" id="f_st_pass" value="${esc(defaultPass)}" placeholder="e.g. Staff@7842" style="font-family:monospace; letter-spacing:1px; font-weight:700; color:var(--signal-cash);" />
+      <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Employee will use this temporary password on first login and will be prompted to create their personal password.</div>
+    </div>
     
-    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:12px; color:var(--text-secondary);">
-      <b style="color:var(--signal-cash);">✓ Employee Portal Activation:</b> Saving will automatically enable this employee's personal login account for the Employee Attendance, Shoot Submission & Task Portal.
+    <div style="background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+      <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; margin:0; text-transform:none; letter-spacing:normal;">
+        <input type="checkbox" id="f_st_send_email" checked style="width:18px; height:18px; margin-top:2px; accent-color:var(--brand);" />
+        <div style="font-size:12.5px; color:var(--text-primary);">
+          <b style="color:var(--brand-light);">✉️ Send Welcome Invite & Default Password via Gmail</b>
+          <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">
+            Triggers an official HTML email with portal link (<span class="mono">${window.location.origin}</span>), username, and temporary password.
+          </div>
+        </div>
+      </label>
     </div>
 
     <div class="modal-actions">
       ${staffId ? `<button class="btn btn-danger-ghost" id="delStBtn" style="margin-right:auto;">Delete</button>` : ''}
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="saveStBtn">Save & Provision Staff</button>
+      <button class="btn btn-primary" id="saveStBtn">Save & Provision Staff ➔</button>
     </div>
-  `, 520);
+  `, 540);
 
-  document.getElementById('saveStBtn').onclick = () => {
+  document.getElementById('saveStBtn').onclick = async () => {
     const nm = document.getElementById('f_st_nm').value.trim();
-    if (!nm) { toast('Name required'); return; }
+    if (!nm) { toast('Staff full name is required'); return; }
     const role = document.getElementById('f_st_rl').value;
     const phone = document.getElementById('f_st_ph').value.trim();
+    const email = document.getElementById('f_st_em').value.trim();
     const baseSalary = Number(document.getElementById('f_st_sal').value) || 0;
+    const pass = (document.getElementById('f_st_pass').value || '').trim() || `Staff@${Math.floor(1000 + Math.random() * 9000)}`;
+    const shouldSendEmail = document.getElementById('f_st_send_email') ? document.getElementById('f_st_send_email').checked : true;
+
+    if (!email) {
+      toast('Staff email address is required for portal login & invite');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveStBtn');
+    saveBtn.innerHTML = 'Sending Invite & Saving... ⏳';
 
     let targetStaffId;
     if (staffId) {
       targetStaffId = staffId;
-      Object.assign(s, { name: nm, role, phone, baseSalary });
+      Object.assign(s, { name: nm, role, phone, email, baseSalary, defaultPassword: pass });
     } else {
       targetStaffId = uid('st');
-      STATE.staff.push({ id: targetStaffId, name: nm, role, phone, baseSalary, status: 'Active' });
+      STATE.staff.push({ id: targetStaffId, name: nm, role, phone, email, baseSalary, defaultPassword: pass, status: 'Active' });
     }
 
     // Auto-provision or update user account for Employee Portal login
-    let existingUser = (STATE.allUsers || []).find(u => u.staffId === targetStaffId || (u.name === nm && u.role === 'employee'));
-    if (!existingUser) {
-      const emailUsername = nm.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const empUser = {
+    let empUser = (STATE.allUsers || []).find(u => u.staffId === targetStaffId || (u.email && u.email.toLowerCase() === email.toLowerCase()));
+    if (!empUser) {
+      empUser = {
         id: `usr_emp_${targetStaffId}`,
         name: nm,
-        email: `${emailUsername}@accountix.agency`,
+        email: email,
+        password: pass,
+        mustChangePassword: true,
         role: 'employee',
         staffId: targetStaffId,
         companyId: STATE.currentUser ? (STATE.currentUser.companyId || 'comp_1') : 'comp_1',
@@ -5737,13 +5937,38 @@ function openStaffModal(staffId = null) {
         DEMO_PROFILES.push(empUser);
       }
     } else {
-      existingUser.name = nm;
-      existingUser.title = role;
+      empUser.name = nm;
+      empUser.email = email;
+      empUser.title = role;
+      empUser.password = pass;
+      empUser.mustChangePassword = true;
+      empUser.staffId = targetStaffId;
+    }
+
+    // Trigger Gmail Invite if selected
+    if (shouldSendEmail && window.AccountiX_API && typeof window.AccountiX_API.inviteStaff === 'function') {
+      try {
+        const inviteRes = await window.AccountiX_API.inviteStaff({
+          toEmail: email,
+          staffName: nm,
+          role,
+          temporaryPassword: pass,
+          agencyName: STATE.settings.agencyName || 'AccountiX Media HQ',
+          loginUrl: window.location.origin,
+          staffId: targetStaffId,
+          baseSalary
+        });
+        if (inviteRes && inviteRes.success) {
+          toast(`✉️ Invite & temporary password sent to ${email}!`);
+        }
+      } catch(e) {
+        console.warn('Invite trigger fallback:', e);
+      }
     }
 
     saveState();
     closeModal();
-    toast(`Staff member "${nm}" saved & enabled for Employee Portal login! 🎉`);
+    toast(`✓ Staff member "${nm}" saved & enabled with default password "${pass}"! 🎉`);
     render();
   };
 

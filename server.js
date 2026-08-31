@@ -684,9 +684,9 @@ app.get('/api/state', (req, res) => {
   res.json(db);
 });
 
-// ================= 11. EMAIL OTP AUTHENTICATION (GMAIL API / SMTP) =================
+// ================= 11. EMAIL OTP & STAFF INVITE AUTHENTICATION (GMAIL API / SMTP) =================
 const { generateSecureOtp, saveOtp, verifyOtp } = require('./lib/otp');
-const { sendOtpEmail } = require('./lib/mailer');
+const { sendOtpEmail, sendStaffInviteEmail } = require('./lib/mailer');
 
 // POST /api/send-otp
 app.post('/api/send-otp', async (req, res) => {
@@ -766,6 +766,124 @@ app.post('/api/verify-otp', (req, res) => {
   } catch (error) {
     console.error('Error in /api/verify-otp:', error.message || error);
     return res.status(500).json({ success: false, error: 'Internal server error during verification.' });
+  }
+});
+
+// ================= 12. STAFF GMAIL INVITATION & PASSWORD CHANGE =================
+// POST /api/staff/invite
+app.post('/api/staff/invite', async (req, res) => {
+  try {
+    const { toEmail, staffName, role, temporaryPassword, agencyName, loginUrl, staffId } = req.body || {};
+    if (!toEmail || !staffName) {
+      return res.status(400).json({ success: false, error: 'Staff member name and valid email address are required.' });
+    }
+
+    const cleanEmail = toEmail.toLowerCase().trim();
+    const tempPass = temporaryPassword || `Staff@${Math.floor(1000 + Math.random() * 9000)}`;
+    const staffRole = role || 'Video Editor';
+    const targetStaffId = staffId || `st_${Date.now()}`;
+    const agency = agencyName || 'AccountiX Media HQ';
+    const portalUrl = loginUrl || 'https://accountix-phi.vercel.app';
+
+    const db = readDb();
+    let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      user = {
+        id: `usr_emp_${targetStaffId}`,
+        name: staffName,
+        email: cleanEmail,
+        password: tempPass,
+        mustChangePassword: true,
+        role: 'employee',
+        staffId: targetStaffId,
+        companyId: 'comp_1',
+        companyName: agency,
+        title: staffRole,
+        avatar: staffRole.includes('Video') || staffRole.includes('Editor') ? '🎬' : staffRole.includes('Shoot') || staffRole.includes('Camera') ? '📹' : '👥',
+        lastActiveAt: new Date().toISOString(),
+        status: 'Active',
+        purchasedDate: new Date().toISOString().split('T')[0],
+        plan: 'Enterprise Suite'
+      };
+      if (!db.allUsers) db.allUsers = [];
+      db.allUsers.push(user);
+    } else {
+      user.name = staffName;
+      user.title = staffRole;
+      user.password = tempPass;
+      user.mustChangePassword = true;
+      user.role = 'employee';
+      user.staffId = targetStaffId;
+    }
+
+    writeDb(db);
+
+    // Trigger Welcome Email via Gmail
+    const mailResult = await sendStaffInviteEmail({
+      toEmail: cleanEmail,
+      staffName,
+      role: staffRole,
+      temporaryPassword: tempPass,
+      agencyName: agency,
+      loginUrl: portalUrl
+    });
+
+    return res.json({
+      success: true,
+      message: `Welcome invite & temporary credentials sent to ${cleanEmail}!`,
+      temporaryPassword: tempPass,
+      user,
+      devMode: !!mailResult.devMode
+    });
+  } catch (error) {
+    console.error('Error in /api/staff/invite:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Failed to send staff invitation email.' });
+  }
+});
+
+// POST /api/auth/change-password
+app.post('/api/auth/change-password', (req, res) => {
+  try {
+    const { email, currentPassword, newPassword } = req.body || {};
+    if (!email || !newPassword) {
+      return res.status(400).json({ success: false, error: 'Email and new password are required.' });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 4 characters long.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const db = readDb();
+    let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    // Verify current password if provided and user has an existing password
+    if (currentPassword && user.password && user.password !== currentPassword) {
+      return res.status(400).json({ success: false, error: 'Current password does not match.' });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false;
+    user.lastPasswordChangedAt = new Date().toISOString();
+
+    writeDb(db);
+
+    // Issue updated token
+    const token = generateToken(user);
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully! You can now log in with your new password.',
+      token,
+      user
+    });
+  } catch (error) {
+    console.error('Error in /api/auth/change-password:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Internal server error while changing password.' });
   }
 });
 
