@@ -286,14 +286,35 @@ app.post('/api/auth/google/config', (req, res) => {
 // Google Cloud Console OAuth 2.0 Verification & Login
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { credential, profile, targetRole } = req.body || {};
+    let { credential, profile, targetRole, accessToken } = req.body || {};
     let email = '';
     let name = '';
     let picture = '';
     let googleSub = '';
 
+    // If accessToken is provided, fetch profile from Google UserInfo
+    if (accessToken && !email) {
+      try {
+        const fetch = globalThis.fetch || require('node-fetch');
+        const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (googleRes.ok) {
+          const googleData = await googleRes.json();
+          if (googleData && googleData.email) {
+            email = googleData.email;
+            name = googleData.name;
+            picture = googleData.picture;
+            googleSub = googleData.sub;
+          }
+        }
+      } catch(e) {
+        console.warn('Backend Google userinfo fetch notice:', e.message);
+      }
+    }
+
     // If credential (Google ID Token from GIS) is provided, decode payload
-    if (credential && typeof credential === 'string') {
+    if (!email && credential && typeof credential === 'string') {
       try {
         const parts = credential.split('.');
         if (parts.length === 3) {
