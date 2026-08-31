@@ -2777,6 +2777,64 @@ function toggleTheme() {
 }
 
 /* ================= GOOGLE CLOUD CONSOLE (OAUTH 2.0) AUTHENTICATION ================= */
+let _googleTokenClient = null;
+
+function initGoogleGIS(clientId) {
+  if (!clientId || !window.google || !window.google.accounts) return;
+  try {
+    if (window.google.accounts.oauth2) {
+      _googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'email profile openid',
+        callback: async (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            toast('Verifying Google Account... ⏳');
+            try {
+              const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokenResponse.access_token}`);
+              const profile = await res.json();
+              if (profile && profile.email) {
+                const loginRes = await AccountiX_API.googleLogin(null, {
+                  email: profile.email,
+                  name: profile.name || profile.given_name || profile.email.split('@')[0],
+                  avatar: profile.picture || '👤'
+                }, _authSelectedRole || 'manager');
+                if (loginRes && loginRes.success) {
+                  closeModal();
+                  render();
+                  toast(`✓ Authenticated as ${loginRes.user.name}!`);
+                } else {
+                  toast('Login error: ' + (loginRes.error || 'Failed to authenticate'));
+                }
+              }
+            } catch (err) {
+              toast('Google profile fetch failed');
+            }
+          }
+        }
+      });
+    }
+
+    if (window.google.accounts.id) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response) => {
+          if (response && response.credential) {
+            toast('Verifying Google Token... ⏳');
+            const loginRes = await AccountiX_API.googleLogin(response.credential, null, _authSelectedRole || 'manager');
+            if (loginRes && loginRes.success) {
+              closeModal();
+              render();
+              toast(`✓ Signed in as ${loginRes.user.name}!`);
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('initGoogleGIS note:', e);
+  }
+}
+
 async function signInWithGoogle(targetRole = 'manager') {
   let clientId = (STATE.settings && STATE.settings.googleClientId) || localStorage.getItem('accountix_google_client_id') || '';
   
@@ -2787,42 +2845,24 @@ async function signInWithGoogle(targetRole = 'manager') {
     } catch(e) {}
   }
 
-  // 1. If Google Identity Services (GIS) is available and Client ID is set
-  if (clientId && window.google && window.google.accounts && window.google.accounts.id) {
-    try {
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response) => {
-          if (response && response.credential) {
-            toast('Verifying Google Token with Backend Engine... ⏳');
-            const loginResult = await AccountiX_API.googleLogin(response.credential, null, targetRole);
-            if (loginResult && loginResult.success) {
-              closeModal();
-              render();
-              toast(`✓ Google Authentication verified! Welcome, ${loginResult.user.name}.`);
-            } else {
-              toast('⚠️ Google Auth Error: ' + (loginResult.error || 'Failed to authenticate'));
-            }
-          }
-        }
-      });
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          openGoogleSignInModal(targetRole);
-        }
-      });
+  if (clientId) {
+    initGoogleGIS(clientId);
+    if (_googleTokenClient) {
+      _googleTokenClient.requestAccessToken({ prompt: 'select_account' });
       return;
-    } catch (e) {
-      console.warn('GIS prompt note:', e);
+    }
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      window.google.accounts.id.prompt();
+      return;
     }
   }
 
-  // 2. Otherwise, open the clean, modern user-facing Google Sign-In card
-  openGoogleSignInModal(targetRole);
+  // If Client ID is not configured yet, prompt for Client ID once
+  openGoogleClientConnectModal(targetRole, clientId);
 }
 window.signInWithGoogle = signInWithGoogle;
 
-function openGoogleSignInModal(targetRole = 'manager') {
+function openGoogleClientConnectModal(targetRole = 'manager', existingClientId = '') {
   showModal(`
     <div class="modal-header">
       <div style="display:flex; align-items:center; gap:10px;">
@@ -2833,56 +2873,55 @@ function openGoogleSignInModal(targetRole = 'manager') {
           <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
         </svg>
         <div>
-          <h3 class="modal-title">Sign In with Google</h3>
-          <div style="font-size:12px; color:var(--text-muted);">Instant verified access to AccountiX Workspace</div>
+          <h3 class="modal-title">Enable Google One-Click Login</h3>
+          <div style="font-size:12px; color:var(--text-muted);">Connect Google Cloud Console Web Client ID</div>
         </div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
-    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:14px; padding:20px; margin-bottom:16px;">
-      <div class="field" style="margin-bottom:14px;">
-        <label>Google Account Email ID *</label>
-        <input type="email" id="f_google_quick_email" placeholder="e.g. yourname@gmail.com" value="${(STATE.currentUser && STATE.currentUser.email) ? STATE.currentUser.email : ''}" required autofocus />
-      </div>
-      <div class="field" style="margin-bottom:18px;">
-        <label>Full Name (Optional)</label>
-        <input type="text" id="f_google_quick_name" placeholder="e.g. Rohan Mehta" value="${(STATE.currentUser && STATE.currentUser.name) ? STATE.currentUser.name : ''}" />
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:14px; padding:18px; margin-bottom:16px;">
+      <div style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+        To open the native Google Account popup on all devices, paste your <b>OAuth 2.0 Web Client ID</b> from <code style="color:var(--brand); font-weight:700;">console.cloud.google.com</code>:
       </div>
 
-      <button class="btn btn-primary" id="btnGoogleQuickLogin" style="width:100%; justify-content:center; padding:12px; font-weight:800; font-size:14px; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
-        Continue to Workspace ➔
+      <div class="field" style="margin-bottom:16px;">
+        <label>Google OAuth 2.0 Client ID *</label>
+        <input id="f_google_client_id_val" placeholder="e.g. 1234567890-abcdef.apps.googleusercontent.com" value="${esc(existingClientId)}" autofocus />
+      </div>
+
+      <button class="btn btn-primary" id="btnSaveAndLaunchGoogle" style="width:100%; justify-content:center; padding:12px; font-weight:800; font-size:13.5px; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+        Save & Launch Google Account Popup ➔
       </button>
     </div>
 
     <div class="modal-actions" style="border-top:1px solid var(--border-subtle); padding-top:12px; margin-top:0;">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
     </div>
-  `, 480);
+  `, 500);
 
-  document.getElementById('btnGoogleQuickLogin').onclick = async () => {
-    const email = (document.getElementById('f_google_quick_email').value || '').trim();
-    const name = (document.getElementById('f_google_quick_name').value || '').trim();
-    if (!email) {
-      toast('Please enter your Google account email');
+  document.getElementById('btnSaveAndLaunchGoogle').onclick = () => {
+    const idVal = (document.getElementById('f_google_client_id_val').value || '').trim();
+    if (!idVal) {
+      toast('Please paste your Google Client ID');
       return;
     }
-    const btn = document.getElementById('btnGoogleQuickLogin');
-    if (btn) btn.innerHTML = 'Signing In... ⏳';
-
-    const loginRes = await AccountiX_API.googleLogin(null, { email, name, avatar: '🌐' }, targetRole);
-    if (loginRes && loginRes.success) {
-      closeModal();
-      render();
-      toast(`✓ Google Authentication verified! Welcome, ${loginRes.user.name}.`);
-    } else {
-      toast('Google Auth error: ' + (loginRes.error || 'Failed to authenticate'));
-    }
+    if (!STATE.settings) STATE.settings = {};
+    STATE.settings.googleClientId = idVal;
+    localStorage.setItem('accountix_google_client_id', idVal);
+    saveState();
+    closeModal();
+    toast('✓ Google Client ID saved! Opening Google popup...');
+    initGoogleGIS(idVal);
+    setTimeout(() => {
+      if (_googleTokenClient) {
+        _googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+      }
+    }, 200);
   };
 }
-window.openGoogleSignInModal = openGoogleSignInModal;
-window.openGoogleAuthSetupModal = openGoogleSignInModal;
-window.openGoogleAuthSetupModal = openGoogleAuthSetupModal;
+window.openGoogleSignInModal = openGoogleClientConnectModal;
+window.openGoogleAuthSetupModal = openGoogleClientConnectModal;
 
 function openAuthModal() {
   const curr = STATE.currentUser || DEMO_PROFILES[1];
