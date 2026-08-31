@@ -1000,25 +1000,210 @@ const WA_TEMPLATES = {
   }
 };
 
-/* ================= DEFAULT SERVICE CATALOG ================= */
-const DEFAULT_SERVICE_CATALOG = [
-  { id: 'srv_1', name: 'Social Media Management (Reels + Posts)', defaultAmount: 45000, cycle: 'Monthly Retainer', description: '12 Reels + 8 Posts + Story sets + Monthly Growth Report' },
-  { id: 'srv_2', name: 'Complete Brand Marketing (SMMA)', defaultAmount: 80000, cycle: 'Monthly Retainer', description: 'Full-funnel Social Media, Reels, Meta Ads, and Influencer Collabs' },
-  { id: 'srv_3', name: 'Meta & Instagram Ads Management', defaultAmount: 35000, cycle: 'Monthly Retainer', description: 'Ad creative strategy, A/B testing, pixel optimization & ROAS scaling' },
-  { id: 'srv_4', name: 'Google Ads & Search Marketing', defaultAmount: 30000, cycle: 'Monthly Retainer', description: 'Search, Display, Performance Max campaigns & keyword bidding' },
-  { id: 'srv_5', name: 'Website Design & Development', defaultAmount: 55000, cycle: 'Project-Based', description: 'High-converting custom website/eCommerce store setup' },
-  { id: 'srv_6', name: 'Reel Video Production & Editing', defaultAmount: 40000, cycle: 'Monthly Retainer', description: 'Scripting, on-site videographer shoot + 4K reels post-production' },
-  { id: 'srv_7', name: 'Search Engine Optimization (SEO)', defaultAmount: 25000, cycle: 'Monthly Retainer', description: 'Technical on-page, off-page backlinks, and local Google Maps ranking' },
-  { id: 'srv_8', name: 'Graphic Design & Branding Kit', defaultAmount: 20000, cycle: 'One-Time', description: 'Logo, typography guidelines, brand identity & social media templates' },
-  { id: 'srv_9', name: 'Influencer Marketing & PR', defaultAmount: 50000, cycle: 'Campaign-Based', description: 'Creator sourcing, briefing, barter/paid outreach & campaign tracking' }
+/* ================= MULTI-PROFESSION & INDUSTRY SERVICE CONFIGS ================= */
+const INDUSTRY_CONFIGS = {
+  ca: {
+    id: 'ca',
+    name: 'Chartered Accountant (CA), Tax & Audit Advisory',
+    shortName: 'CA & Tax Advisory',
+    icon: '📊',
+    tagline: 'Financial Advisory, Tax Compliance & Audit Operating System',
+    clientTerm: 'Client Accounts & Corporates',
+    serviceTerm: 'Audit & Compliance Retainers',
+    deliverableTerm: 'Tax Filings & Audit Reports',
+    teamTerm: 'Tax Associates & Article Trainees',
+    services: [
+      { id: 'srv_ca_1', name: 'Monthly GST Filing (GSTR-1 & 3B) + ITC 2B Match', defaultAmount: 7500, cycle: 'Monthly Retainer', description: 'Monthly GSTR-1, GSTR-3B filings, ITC reconciliation, and input credit optimization' },
+      { id: 'srv_ca_2', name: 'Corporate Statutory Audit & Tax Audit (3CD)', defaultAmount: 50000, cycle: 'Annual Retainer', description: 'Complete balance sheet audit, 3CD reporting, notes on accounts & statutory sign-off' },
+      { id: 'srv_ca_3', name: 'Comprehensive Income Tax Returns (ITR-1 to 7)', defaultAmount: 12000, cycle: 'Annual', description: 'Business & individual ITR filing with capital gains and depreciation schedules' },
+      { id: 'srv_ca_4', name: 'Monthly Corporate Bookkeeping & Management Accounts', defaultAmount: 18000, cycle: 'Monthly Retainer', description: 'Bank reconciliation, ledger entries, voucher verification & monthly MIS reports' },
+      { id: 'srv_ca_5', name: 'Company Incorporation & ROC Annual Compliance', defaultAmount: 25000, cycle: 'One-Time', description: 'Pvt Ltd/LLP incorporation, DIN, DSC, MCA annual ROC filings and board resolutions' },
+      { id: 'srv_ca_6', name: 'TDS Returns & Payroll Tax Processing', defaultAmount: 8500, cycle: 'Quarterly Retainer', description: '24Q, 26Q TDS quarterly returns, challan verification and Form 16/16A issuance' }
+    ]
+  },
+  it_dev: {
+    id: 'it_dev',
+    name: 'IT Services, Software & Developer Agency',
+    shortName: 'IT & Software Dev',
+    icon: '💻',
+    tagline: 'Custom Software, Cloud Architecture & SLA Maintenance OS',
+    clientTerm: 'Clients & Product Accounts',
+    serviceTerm: 'Dev Contracts & SLA Retainers',
+    deliverableTerm: 'Sprints, Milestones & Code Releases',
+    teamTerm: 'Full-Stack Developers & Engineers',
+    services: [
+      { id: 'srv_it_1', name: 'Full-Stack Web & Mobile App Development', defaultAmount: 95000, cycle: 'Project Milestone', description: 'Custom React/Next.js/Node frontend & backend with PostgreSQL and REST/GraphQL APIs' },
+      { id: 'srv_it_2', name: 'Monthly Software Maintenance & 24/7 SLA Support', defaultAmount: 35000, cycle: 'Monthly Retainer', description: 'Bug fixes, uptime monitoring, security patches, library upgrades and server backups' },
+      { id: 'srv_it_3', name: 'Cloud Infrastructure & AWS / GCP DevOps Architecture', defaultAmount: 50000, cycle: 'Monthly Retainer', description: 'CI/CD pipeline, Docker containerization, Kubernetes clustering, autoscaling & cost optimization' },
+      { id: 'srv_it_4', name: 'API Integration & Payment Gateway Microservices', defaultAmount: 40000, cycle: 'Project-Based', description: 'Stripe, Razorpay, Supabase, CRM webhooks, and third-party API orchestration' },
+      { id: 'srv_it_5', name: 'UI/UX Product Prototyping & Design System', defaultAmount: 30000, cycle: 'One-Time', description: 'Figma interactive clickable prototypes, design tokens, and user journey flowmaps' },
+      { id: 'srv_it_6', name: 'Database Optimization & Performance Tuning', defaultAmount: 45000, cycle: 'One-Time', description: 'Query indexing, PostgreSQL vacuuming, caching layers, and throughput scaling' }
+    ]
+  },
+  digital_agency: {
+    id: 'digital_agency',
+    name: 'Digital Marketing & Social Media Agency',
+    shortName: 'Digital & Growth Marketing',
+    icon: '🚀',
+    tagline: 'Growth Marketing, Performance Ads & Brand Media OS',
+    clientTerm: 'Agency Retainer Clients',
+    serviceTerm: 'Marketing Retainers & Ad Management',
+    deliverableTerm: 'Campaigns, Creatives & Content',
+    teamTerm: 'Media Buyers, Designers & Marketers',
+    services: [
+      { id: 'srv_mkt_1', name: 'Social Media Growth Management (Content & Reels)', defaultAmount: 45000, cycle: 'Monthly Retainer', description: 'Complete monthly calendar, 15 reels/creatives, community management & analytics' },
+      { id: 'srv_mkt_2', name: 'Meta & Instagram Performance Ads Scaling', defaultAmount: 35000, cycle: 'Monthly Retainer', description: 'High-ROAS conversion campaigns, pixel/CAPI tracking, ad creative iterations & scaling' },
+      { id: 'srv_mkt_3', name: 'Google Ads & Search Intent Marketing', defaultAmount: 30000, cycle: 'Monthly Retainer', description: 'Search, Display, Performance Max, remarketing bidding & conversion rate tracking' },
+      { id: 'srv_mkt_4', name: 'Full-Funnel Brand Marketing & Growth OS', defaultAmount: 85000, cycle: 'Monthly Retainer', description: 'End-to-end paid acquisition, organic reach, email flows & influencer campaigns' },
+      { id: 'srv_mkt_5', name: 'Search Engine Optimization (SEO & Local Maps)', defaultAmount: 28000, cycle: 'Monthly Retainer', description: 'Technical SEO audits, high-authority backlink building & Google My Business rankings' },
+      { id: 'srv_mkt_6', name: 'Brand Identity & Visual Design Suite', defaultAmount: 25000, cycle: 'One-Time', description: 'Vector logos, typography guides, presentation decks & social design kit' }
+    ]
+  },
+  ecommerce: {
+    id: 'ecommerce',
+    name: 'Online Business & E-Commerce Operations',
+    shortName: 'E-Commerce & Online Store',
+    icon: '🛍️',
+    tagline: 'E-Commerce Store, Inventory & Ad Scaling OS',
+    clientTerm: 'Brands & Store Accounts',
+    serviceTerm: 'Store Management & Growth Retainers',
+    deliverableTerm: 'Product Catalogs, Drops & Campaigns',
+    teamTerm: 'Store Managers & Catalog Specialists',
+    services: [
+      { id: 'srv_ecom_1', name: 'Shopify / WooCommerce Store Ops & Maintenance', defaultAmount: 40000, cycle: 'Monthly Retainer', description: 'Theme customizations, app integrations, checkout optimization & order sync' },
+      { id: 'srv_ecom_2', name: 'Marketplace Management (Amazon, Flipkart, Etsy)', defaultAmount: 30000, cycle: 'Monthly Retainer', description: 'A+ content, product listing SEO, inventory syncing and seller support' },
+      { id: 'srv_ecom_3', name: 'E-Commerce Paid Ads & ROAS Optimization', defaultAmount: 45000, cycle: 'Monthly Retainer', description: 'Meta/Google shopping campaigns, catalog dynamic ads, and cart abandonment retargeting' },
+      { id: 'srv_ecom_4', name: 'Conversion Rate Optimization (CRO) & Funnel Audit', defaultAmount: 35000, cycle: 'Project-Based', description: 'Heatmap analysis, A/B checkout experiments, page speed boost & average order value uplifts' }
+    ]
+  },
+  consulting: {
+    id: 'consulting',
+    name: 'Legal, Architecture & Professional Consulting',
+    shortName: 'Legal & Consulting Practice',
+    icon: '⚖️',
+    tagline: 'Advisory Retainers, Legal & Professional Practice OS',
+    clientTerm: 'Client Accounts & Cases',
+    serviceTerm: 'Advisory Retainers & Legal Mandates',
+    deliverableTerm: 'Briefs, Legal Drafts & Plans',
+    teamTerm: 'Senior Associates & Consultants',
+    services: [
+      { id: 'srv_con_1', name: 'Strategic Business Advisory & Retainer Mandate', defaultAmount: 60000, cycle: 'Monthly Retainer', description: 'Executive consulting, operational reviews, growth roadmap and strategic guidance' },
+      { id: 'srv_con_2', name: 'Commercial Contracts & NDA Legal Drafting', defaultAmount: 18000, cycle: 'Per Contract', description: 'Vendor agreements, client service SLAs, employment contracts and NDA drafting' },
+      { id: 'srv_con_3', name: 'Architectural Project Planning & 3D Visualization', defaultAmount: 75000, cycle: 'Project Milestone', description: 'Architectural blueprints, 3D photorealistic renderings, structural planning & elevations' },
+      { id: 'srv_con_4', name: 'Regulatory Compliance & Due Diligence Audit', defaultAmount: 40000, cycle: 'Project-Based', description: 'Statutory compliance verification, risk assessment and due diligence dossiers' }
+    ]
+  },
+  freelancer: {
+    id: 'freelancer',
+    name: 'Freelancer & Independent Specialist',
+    shortName: 'Freelancer & Creator',
+    icon: '🎯',
+    tagline: 'Independent Client Contracts, Hourly & Milestone OS',
+    clientTerm: 'Direct Clients',
+    serviceTerm: 'Client Retainers & Gig Contracts',
+    deliverableTerm: 'Milestones & Client Deliverables',
+    teamTerm: 'Collaborators & Subcontractors',
+    services: [
+      { id: 'srv_fl_1', name: 'Dedicated Monthly Retainer (20 Hours/Week)', defaultAmount: 50000, cycle: 'Monthly Retainer', description: 'Dedicated freelance capacity, priority turnaround and direct Slack/WhatsApp comms' },
+      { id: 'srv_fl_2', name: 'Fixed Scope Project Deliverable', defaultAmount: 35000, cycle: 'Project Milestone', description: 'End-to-end execution of agreed project scope with 2 revision cycles' },
+      { id: 'srv_fl_3', name: 'Hourly Consulting / Pair Programming Block', defaultAmount: 20000, cycle: '10-Hour Block', description: '1-on-1 technical advisory, live pair programming or strategy consulting' }
+    ]
+  },
+  general: {
+    id: 'general',
+    name: 'General Business & Multi-Profession OS',
+    shortName: 'General Business OS',
+    icon: '🏢',
+    tagline: 'Universal Business Operating System & Financial Engine',
+    clientTerm: 'Client Accounts & Customers',
+    serviceTerm: 'Service Contracts & Retainers',
+    deliverableTerm: 'Work Orders & Deliverables',
+    teamTerm: 'Team Members & Staff',
+    services: [
+      { id: 'srv_gen_1', name: 'Standard Service Retainer', defaultAmount: 30000, cycle: 'Monthly Retainer', description: 'Recurring standard client service package' },
+      { id: 'srv_gen_2', name: 'Premium Enterprise Package', defaultAmount: 60000, cycle: 'Monthly Retainer', description: 'Comprehensive enterprise tier with priority handling' },
+      { id: 'srv_gen_3', name: 'Project-Based Contract', defaultAmount: 45000, cycle: 'Project-Based', description: 'Milestone-based one-time project execution' },
+      { id: 'srv_gen_4', name: 'Advisory & Consulting Session', defaultAmount: 15000, cycle: 'One-Time', description: 'Expert consultation and strategic assessment' }
+    ]
+  }
+};
+
+const DEFAULT_SERVICE_CATALOG = [...INDUSTRY_CONFIGS.general.services];
+
+const EXPENSE_CATEGORIES = [
+  'Salary & Payroll',
+  'Office Rent & Workspace',
+  'Electricity & Utilities',
+  'Software, Cloud & SaaS Tools',
+  'Hardware & Equipment',
+  'Travel & Conveyance',
+  'Subcontractors & Freelancers',
+  'Marketing & Client Acquisition',
+  'Professional Certifications & Legal',
+  'Tax & Compliance',
+  'Food & Refreshments',
+  'Miscellaneous'
 ];
 
-const EXPENSE_CATEGORIES = ['Salary','Office Rent','Electricity & Utilities','Software & SaaS Tools','Shooting Equipment & Gear','Travel & Petrol','Freelancers & Subcontractors','Marketing & Client Ads','Food & Beverages','Legal & Accounting','Miscellaneous'];
-const CONTENT_TYPES = ['Reel Shoot','AI Reel','Reel Edit Only','Carousel / Static Post','Story Set','Meta Ads Creative','YouTube Video','Website Landing Page'];
-const CONTENT_STATUSES = ['Idea','Scripting','Shoot Assigned','Shoot Done','Editing','Edit Done','Client Approval','Approved','Uploaded/Posted'];
-const STAFF_ROLES = ['Video Shooter / Cinematographer','Video Editor','Motion Graphics Designer','Meta Ads Specialist','Google Ads Expert','Full-Stack Web Developer','Telecaller / Sales Executive','Social Media Manager','Account Manager','Creative Director','HR / Operations'];
-const PAYMENT_MODES = ['UPI (GPay / PhonePe / Paytm)','Bank Transfer (NEFT/IMPS/RTGS)','Cash','Cheque','Credit Card / Debit Card'];
-const LEAD_STAGES = ['New','Contacted','Meeting Scheduled','Proposal Sent','Negotiation','Won','Lost'];
+const CONTENT_TYPES = [
+  'Milestone / Deliverable',
+  'Tax Filing / Audit Report',
+  'Code Sprint & Feature Release',
+  'Social Media Reel / Post',
+  'Ad Campaign Creative',
+  'Client Strategy Document',
+  'UI/UX Design Mockup',
+  'Website Landing Page',
+  'Consulting Advisory Brief'
+];
+
+const CONTENT_STATUSES = [
+  'Idea',
+  'In Progress',
+  'Assigned',
+  'Under Review',
+  'Client Approval',
+  'Approved',
+  'Completed / Delivered'
+];
+
+const STAFF_ROLES = [
+  'Full-Stack Developer / Engineer',
+  'Chartered Accountant / Tax Associate',
+  'Lead Video Editor / Creator',
+  'Cinematographer / Shooter',
+  'DevOps & Cloud Engineer',
+  'UI/UX Designer',
+  'Growth Marketer / Media Buyer',
+  'Sales Executive / Account Manager',
+  'Legal Associate / Consultant',
+  'Operations / HR Specialist',
+  'General Specialist'
+];
+
+const PAYMENT_MODES = [
+  'UPI (GPay / PhonePe / Paytm)',
+  'Bank Transfer (NEFT/IMPS/RTGS)',
+  'Cash',
+  'Cheque',
+  'Credit Card / Debit Card',
+  'Stripe / Razorpay / International Wire'
+];
+
+const LEAD_STAGES = [
+  'New',
+  'Contacted',
+  'Meeting Scheduled',
+  'Proposal Sent',
+  'Negotiation',
+  'Won',
+  'Lost'
+];
+
+function getProfessionConfig(profKey) {
+  const k = profKey || (STATE.settings && STATE.settings.profession) || 'general';
+  return INDUSTRY_CONFIGS[k] || INDUSTRY_CONFIGS.general;
+}
 
 /* ================= MULTI-TENANT RBAC & DEMO PROFILES ================= */
 const DEMO_PROFILES = [
@@ -1937,18 +2122,44 @@ async function loadState() {
     }
     if (raw) {
       Object.assign(STATE, JSON.parse(raw));
-      if (!STATE.clients || !STATE.clients.length) {
-        seedData();
-      }
-      if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
-        STATE.serviceCatalog = [...DEFAULT_SERVICE_CATALOG];
-      }
-    } else {
-      seedData();
     }
   } catch (e) {
-    seedData();
+    console.warn('Load state notice:', e);
   }
+
+  // Ensure robust data structure without forcing fake sample data
+  if (!Array.isArray(STATE.clients)) STATE.clients = [];
+  if (!Array.isArray(STATE.packages)) STATE.packages = [];
+  if (!Array.isArray(STATE.payments)) STATE.payments = [];
+  if (!Array.isArray(STATE.expenses)) STATE.expenses = [];
+  if (!Array.isArray(STATE.staff)) STATE.staff = [];
+  if (!Array.isArray(STATE.attendance)) STATE.attendance = [];
+  if (!Array.isArray(STATE.salaryPayments)) STATE.salaryPayments = [];
+  if (!Array.isArray(STATE.tasks)) STATE.tasks = [];
+  if (!Array.isArray(STATE.contentItems)) STATE.contentItems = [];
+  if (!Array.isArray(STATE.leads)) STATE.leads = [];
+  if (!Array.isArray(STATE.userData)) STATE.userData = [];
+
+  if (!STATE.settings) {
+    STATE.settings = {
+      agencyName: 'My Enterprise',
+      profession: 'general',
+      tagline: 'Multi-Profession Business OS & Financial Engine',
+      phone: '',
+      email: '',
+      currencySymbol: '₹',
+      theme: 'dark'
+    };
+  }
+  if (!STATE.settings.profession) {
+    STATE.settings.profession = 'general';
+  }
+
+  if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
+    const profCfg = getProfessionConfig(STATE.settings.profession);
+    STATE.serviceCatalog = [...profCfg.services];
+  }
+
   if (STATE.settings && STATE.settings.theme) {
     document.documentElement.setAttribute('data-theme', STATE.settings.theme);
   }
@@ -2064,9 +2275,187 @@ function seedData() {
   saveState();
 }
 
+function applyIndustryTemplate(indKey, showToastMsg = true) {
+  const cfg = INDUSTRY_CONFIGS[indKey] || INDUSTRY_CONFIGS.general;
+  if (!STATE.settings) STATE.settings = {};
+  STATE.settings.profession = cfg.id;
+  STATE.settings.tagline = cfg.tagline;
+  STATE.serviceCatalog = JSON.parse(JSON.stringify(cfg.services));
+  saveState();
+  if (showToastMsg) {
+    toast(`✓ Switched profession to ${cfg.name}! Rate card updated.`);
+  }
+  render();
+}
+window.applyIndustryTemplate = applyIndustryTemplate;
+
+function openProfessionSelectModal() {
+  const currentProf = (STATE.settings && STATE.settings.profession) || 'general';
+  
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🏷️ Select Business Profession & Industry</h3>
+        <div style="font-size:12.5px; color:var(--text-muted);">Customize AccountiX terminology, KPI metrics & service rate card templates for your specific profession</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:18px; max-height:60vh; overflow-y:auto; padding:2px;">
+      ${Object.values(INDUSTRY_CONFIGS).map(cfg => {
+        const isActive = cfg.id === currentProf;
+        return `
+          <div class="card" style="border:2px solid ${isActive ? 'var(--brand)' : 'var(--border-card)'}; border-radius:12px; padding:14px; background:${isActive ? 'rgba(99,102,241,0.06)' : 'var(--bg-subtle)'}; cursor:pointer; transition:transform 0.15s ease, border-color 0.15s ease;" onclick="applyIndustryTemplate('${cfg.id}'); closeModal();" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="if(!${isActive}) this.style.borderColor='var(--border-card)'">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:24px;">${cfg.icon}</span>
+                <div>
+                  <h4 style="font-size:14px; font-weight:800; color:var(--text-primary); margin:0;">${esc(cfg.name)}</h4>
+                  <div style="font-size:11px; color:var(--text-muted);">${esc(cfg.shortName)}</div>
+                </div>
+              </div>
+              ${isActive ? '<span class="pill pill-green" style="font-size:10px; font-weight:800;">ACTIVE</span>' : ''}
+            </div>
+            
+            <p style="font-size:12px; color:var(--text-secondary); line-height:1.45; margin:6px 0 10px 0;">${esc(cfg.tagline)}</p>
+            
+            <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 10px; font-size:11px; color:var(--text-muted); display:flex; flex-direction:column; gap:3px;">
+              <div>• <b>Accounts:</b> ${esc(cfg.clientTerm)}</div>
+              <div>• <b>Deliverables:</b> ${esc(cfg.deliverableTerm)}</div>
+              <div>• <b>Rate Card:</b> ${cfg.services.length} Starter Templates</div>
+            </div>
+
+            <button class="btn ${isActive ? 'btn-primary' : 'btn-ghost'} btn-sm" style="width:100%; margin-top:10px; font-weight:700; font-size:12px;">
+              ${isActive ? '✓ Currently Active' : '⚡ Select & Apply Template'}
+            </button>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div style="display:flex; justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  `, 720);
+}
+window.openProfessionSelectModal = openProfessionSelectModal;
+
+function openSetTargetModal() {
+  const currTarget = Number(STATE._simTargetProfit) || 150000;
+  const currAvg = Number(STATE._simAvgRetainer) || 45000;
+  const prof = getProfessionConfig();
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🎯 Set Monthly Revenue & Profit Target</h3>
+        <div style="font-size:12.5px; color:var(--text-muted);">Interactive growth simulator for <b>${esc(prof.name)}</b></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;">
+      <label style="font-weight:700;">Target Monthly Net Profit (${STATE.settings.currencySymbol || '₹'}) *</label>
+      <input type="number" id="f_target_amount" value="${currTarget}" step="5000" min="10000" style="font-size:18px; font-weight:800; color:var(--signal-cash); font-family:'JetBrains Mono', monospace;" required autofocus />
+    </div>
+
+    <!-- Quick Preset Chips -->
+    <div style="margin-bottom:18px;">
+      <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Quick Target Presets:</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        ${[50000, 100000, 200000, 350000, 500000, 1000000, 2500000].map(amt => `
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('f_target_amount').value = ${amt}; updateTargetSimPreview();" style="font-size:11.5px; padding:4px 10px; font-weight:700;">
+            ${fmtMoney(amt)}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-bottom:18px;">
+      <div class="field">
+        <label style="font-weight:700;">Average Client Retainer / Contract Ticket (${STATE.settings.currencySymbol || '₹'})</label>
+        <input type="number" id="f_target_avg_ticket" value="${currAvg}" step="2000" min="1000" oninput="updateTargetSimPreview()" />
+      </div>
+      <div class="field">
+        <label style="font-weight:700;">Active Business Profession</label>
+        <select id="f_target_prof" onchange="applyIndustryTemplate(this.value, false); updateTargetSimPreview();">
+          ${Object.values(INDUSTRY_CONFIGS).map(c => `
+            <option value="${c.id}" ${c.id === prof.id ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>
+          `).join('')}
+        </select>
+      </div>
+    </div>
+
+    <!-- Live Preview Box -->
+    <div id="targetSimPreviewBox" style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:10px; padding:14px; margin-bottom:20px;">
+      <!-- Populated dynamically -->
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="btnSaveTargetConfig">🎯 Save Business Target</button>
+    </div>
+  `, 560);
+
+  function updateTargetSimPreview() {
+    const box = document.getElementById('targetSimPreviewBox');
+    if (!box) return;
+    const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
+    const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
+    const pKey = document.getElementById('f_target_prof').value;
+    const pCfg = INDUSTRY_CONFIGS[pKey] || INDUSTRY_CONFIGS.general;
+
+    const needed = Math.ceil(tAmt / (aAmt * 0.6));
+    const estimatedWork = Math.round(needed * 2.8);
+    const capacity = Math.max(1, Math.ceil(needed / 4));
+
+    box.innerHTML = `
+      <div style="font-size:12px; font-weight:800; color:var(--brand); text-transform:uppercase; margin-bottom:10px;">
+        📊 Required Operating Capacity for ${fmtMoney(tAmt)}/mo:
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
+        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">${esc(pCfg.clientTerm.toUpperCase())}</div>
+          <div class="mono" style="font-size:16px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${needed}</div>
+        </div>
+        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">MONTHLY OUTPUT</div>
+          <div class="mono" style="font-size:16px; font-weight:800; color:var(--brand); margin-top:2px;">~${estimatedWork}</div>
+        </div>
+        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
+          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">TEAM CAPACITY</div>
+          <div class="mono" style="font-size:16px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${capacity} Staff</div>
+        </div>
+      </div>
+    `;
+  }
+  window.updateTargetSimPreview = updateTargetSimPreview;
+  updateTargetSimPreview();
+
+  document.getElementById('f_target_amount').oninput = updateTargetSimPreview;
+
+  document.getElementById('btnSaveTargetConfig').onclick = () => {
+    const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
+    const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
+    const pKey = document.getElementById('f_target_prof').value;
+
+    STATE._simTargetProfit = tAmt;
+    STATE._simAvgRetainer = aAmt;
+    if (!STATE.settings) STATE.settings = {};
+    STATE.settings.profession = pKey;
+
+    saveState();
+    closeModal();
+    toast(`🎯 Target set to ${fmtMoney(tAmt)}/mo for ${INDUSTRY_CONFIGS[pKey].shortName}!`);
+    render();
+  };
+}
+window.openSetTargetModal = openSetTargetModal;
+
 function getServiceCatalog() {
   if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
-    STATE.serviceCatalog = [...DEFAULT_SERVICE_CATALOG];
+    const profCfg = getProfessionConfig();
+    STATE.serviceCatalog = [...profCfg.services];
   }
   return STATE.serviceCatalog;
 }
@@ -2230,7 +2619,7 @@ function getNavItems() {
     return [
       { id: 'dashboard', label: 'Executive Dashboard', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>' },
       { id: 'clients', label: 'Clients & Pricing', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="8" r="2.6"/><path d="M17 14c2.6 0 4.5 2 4.5 5"/></svg>' },
-      { id: 'content', label: 'Content Studio', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>' },
+      { id: 'content', label: 'Studio & Deliverables', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3V9z"/></svg>' },
       { id: 'sales', label: 'Sales CRM', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l6-6 4 4 8-8"/><path d="M21 2h-6M21 2v6"/></svg>' },
       { id: 'team', label: 'Team & Payroll', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3.5"/><path d="M2 20c0-4 3-7 7-7s7 3 7 7"/><path d="M16 4.5c1.7.4 3 2 3 3.9 0 1.9-1.3 3.5-3 3.9M20 20c0-3-1.8-5.5-4.5-6.5"/></svg>' },
       { id: 'finance', label: 'Financials & Cash', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2.5"/><circle cx="12" cy="12.5" r="3"/><path d="M6 6V5a2 2 0 012-2h8a2 2 0 012 2v1"/></svg>' },
@@ -4808,33 +5197,89 @@ function confirmDeleteUserData(id) {
 }
 window.confirmDeleteUserData = confirmDeleteUserData;
 
-/* ---------- 1. DASHBOARD WITH INTERACTIVE REVENUE SIMULATOR ---------- */
+/* ---------- 1. DASHBOARD WITH MULTI-PROFESSION GROWTH SIMULATOR ---------- */
 function renderDashboardView() {
   const ym = currentYM();
   const m = monthStats(ym);
   const today = todayStr();
+  const prof = getProfessionConfig();
   const renewals7 = STATE.packages.filter(p => p.endDate && p.status !== 'Cancelled' && daysBetween(today, p.endDate) >= 0 && daysBetween(today, p.endDate) <= 7);
   const todaysIncome = STATE.payments.filter(p => p.date === today).reduce((s, p) => s + (Number(p.amount) || 0), 0);
   const todaysExpense = STATE.expenses.filter(e => e.date === today).reduce((s, e) => s + (Number(e.amount) || 0), 0);
   const presentStaff = STATE.attendance.filter(a => a.date === today && a.status === 'Present');
   const todayContent = STATE.contentItems.filter(it => it.date === today);
 
-  const targetProfit = STATE._simTargetProfit || 150000;
-  const avgRetainer = 45000;
-  const neededClients = Math.ceil(targetProfit / (avgRetainer * 0.55));
-  const estimatedReelsWeekly = Math.round(neededClients * 2.5);
+  const targetProfit = Number(STATE._simTargetProfit) || 150000;
+  const avgRetainer = Number(STATE._simAvgRetainer) || 45000;
+  const neededClients = Math.max(1, Math.ceil(targetProfit / (avgRetainer * 0.6)));
+  const estimatedOutput = Math.round(neededClients * 2.8);
+  const teamCap = Math.max(1, Math.ceil(neededClients / 4));
+  const isCleanSlate = (STATE.clients.length === 0 && STATE.payments.length === 0);
 
   return `
     <div class="view-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
       <div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <span style="font-size:22px;">${prof.icon}</span>
+          <span class="pill pill-brand" style="font-size:11.5px; font-weight:800; cursor:pointer;" onclick="openProfessionSelectModal()" title="Click to change your profession">
+            ${esc(prof.shortName)} ▾
+          </span>
+        </div>
         <h1 class="view-title">Executive Command Center</h1>
-        <p class="view-sub" style="color:var(--text-secondary);">${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Real-Time Agency Cash Engine</p>
+        <p class="view-sub" style="color:var(--text-secondary);">${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${esc(prof.tagline)}</p>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="openProfessionSelectModal()">🏷️ Switch Profession</button>
+        <button class="btn btn-ghost" onclick="openSetTargetModal()">🎯 Set Target Goal</button>
         <button class="btn btn-signal" id="quickPayDashBtn">+ Record Payment</button>
         <button class="btn btn-ghost" id="quickExpDashBtn">+ Add Expense</button>
       </div>
     </div>
+
+    <!-- Clean Slate Welcome & Guided Setup Card (Shown when workspace is empty) -->
+    ${isCleanSlate ? `
+      <div class="card" style="margin-bottom:24px; background:linear-gradient(135deg, rgba(99,102,241,0.12), rgba(16,185,129,0.08)); border:1.5px solid rgba(99,102,241,0.4); border-radius:18px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+              <span style="font-size:28px;">🚀</span>
+              <h2 style="font-size:18px; font-weight:800; color:var(--text-primary); margin:0;">
+                Welcome to Your Clean Business OS!
+              </h2>
+            </div>
+            <p style="font-size:13.5px; color:var(--text-secondary); max-width:640px; margin:0 0 16px 0; line-height:1.55;">
+              Your workspace starts fresh with zero dummy records. AccountiX is built for all professions: <b>CA, Software Devs, IT Firms, Digital Marketers, E-Commerce, Consultants & Freelancers</b>. Follow these 3 quick steps to tailor your engine:
+            </p>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="if(confirm('Load realistic sample demo data into your workspace?')){ seedData(); render(); toast('Demo data loaded!'); }" style="font-size:11.5px;">
+            🌱 Load Sample Demo Data
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:8px;">
+          <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openSetTargetModal()">
+            <div style="font-size:22px; margin-bottom:6px;">🎯</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">1. Set Revenue Target</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Configure your monthly net take-home & average client ticket.</div>
+            <div style="font-size:11.5px; color:var(--brand); font-weight:700; margin-top:8px;">Set Target (${fmtMoney(targetProfit)}) ➔</div>
+          </div>
+
+          <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openProfessionSelectModal()">
+            <div style="font-size:22px; margin-bottom:6px;">🏷️</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">2. Select Your Profession</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Load ready-to-use rate card templates for CA, IT, Agency or Devs.</div>
+            <div style="font-size:11.5px; color:var(--signal-cash); font-weight:700; margin-top:8px;">Active: ${esc(prof.shortName)} ➔</div>
+          </div>
+
+          <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openNewClientModal()">
+            <div style="font-size:22px; margin-bottom:6px;">👥</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">3. Onboard First Client</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Add your real client accounts, retainer terms and payment dues.</div>
+            <div style="font-size:11.5px; color:var(--accent-cyan); font-weight:700; margin-top:8px;">+ Add Client Account ➔</div>
+          </div>
+        </div>
+      </div>
+    ` : ''}
 
     <!-- Realized Cash Hero (Adapts seamlessly in Light & Dark Mode) -->
     <div class="hero-earnings">
@@ -4849,39 +5294,49 @@ function renderDashboardView() {
       </div>
     </div>
 
-    <!-- Interactive Agency Growth Simulator Tool -->
+    <!-- Multi-Profession Business Growth & Target Simulator -->
     <div class="simulator-box">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div>
-          <div style="font-size:13px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px;">
-            🧮 Interactive Agency Profit Simulator
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="font-size:13px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px;">
+              🧮 ${esc(prof.shortName)} Growth & Target Simulator
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="openProfessionSelectModal()" style="padding:2px 8px; font-size:10.5px;">
+              Change Profession ▾
+            </button>
           </div>
-          <div style="font-size:12px; color:var(--text-secondary);">
-            Slide to set your target monthly net profit and see required retainers & shoot volume
+          <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">
+            Slide or manually set your monthly net target to calculate required ${esc(prof.clientTerm.toLowerCase())} & ${esc(prof.deliverableTerm.toLowerCase())}
           </div>
         </div>
-        <div class="mono" style="font-size:20px; font-weight:800; color:var(--signal-cash);">
-          Target: ${fmtMoney(targetProfit)}/mo
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="mono" style="font-size:20px; font-weight:800; color:var(--signal-cash);">
+            Target: ${fmtMoney(targetProfit)}/mo
+          </div>
+          <button class="btn btn-signal btn-sm" onclick="openSetTargetModal()" style="padding:4px 10px; font-size:11.5px; font-weight:700;">
+            🎯 Set Target
+          </button>
         </div>
       </div>
 
-      <input type="range" class="slider-range" id="profitSimSlider" min="50000" max="1000000" step="25000" value="${targetProfit}">
+      <input type="range" class="slider-range" id="profitSimSlider" min="25000" max="2500000" step="25000" value="${targetProfit}">
 
       <div class="grid grid-3" style="margin-top:14px; margin-bottom:0;">
         <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
-          <div style="font-size:11px; color:var(--text-muted); font-weight:700;">ACTIVE RETAINERS NEEDED</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--brand); margin-top:2px;">~${neededClients} Clients</div>
-          <div style="font-size:10.5px; color:var(--text-muted);">at ~₹45k average ticket</div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">ACTIVE ${esc(prof.clientTerm.toUpperCase())} NEEDED</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--brand); margin-top:2px;">~${neededClients} Accounts</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">at ~${fmtMoney(avgRetainer)} avg retainer</div>
         </div>
         <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
-          <div style="font-size:11px; color:var(--text-muted); font-weight:700;">ESTIMATED WEEKLY REEL OUTPUT</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${estimatedReelsWeekly} Reels / week</div>
-          <div style="font-size:10.5px; color:var(--text-muted);">across active clients</div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">ESTIMATED MONTHLY ${esc(prof.deliverableTerm.toUpperCase())}</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${estimatedOutput} Deliverables / mo</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">across all active clients</div>
         </div>
         <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
-          <div style="font-size:11px; color:var(--text-muted); font-weight:700;">RECOMMENDED CREATIVE TEAM</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${Math.max(2, Math.ceil(neededClients / 3))} Creators</div>
-          <div style="font-size:10.5px; color:var(--text-muted);">Shooters + Editors capacity</div>
+          <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">RECOMMENDED ${esc(prof.teamTerm.toUpperCase())}</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${teamCap} Staff / Associates</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">Execution capacity</div>
         </div>
       </div>
     </div>
@@ -4896,15 +5351,15 @@ function renderDashboardView() {
 
     <div class="grid grid-2">
       <div class="card">
-        <div class="card-title"><span>🎬 Content & Shoots Scheduled Today</span><button class="btn btn-ghost btn-sm" onclick="STATE.view='content'; render();">Open Studio</button></div>
+        <div class="card-title"><span>📋 Scheduled Deliverables & Sprints Today</span><button class="btn btn-ghost btn-sm" onclick="STATE.view='content'; render();">Open Deliverables</button></div>
         ${todayContent.length ? `<div style="display:flex; flex-direction:column; gap:10px;">${todayContent.map(it => {
           const client = STATE.clients.find(c => c.id === it.clientId);
           const shooter = STATE.staff.find(s => s.id === it.shootById);
           return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--bg-subtle); border-radius:9px; border:1px solid var(--border-subtle);">
             <div><div style="font-weight:700; font-size:13px; color:var(--text-primary);">${esc(it.topic || it.type)}</div><div style="font-size:11.5px; color:var(--brand);">${esc(client ? client.name : '—')} · <span style="color:var(--text-muted)">${it.type}</span></div></div>
-            <div style="text-align:right;"><span class="pill pill-brand">${it.status}</span><div style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">${shooter ? `🎥 ${esc(shooter.name)}` : ''}</div></div>
+            <div style="text-align:right;"><span class="pill pill-brand">${it.status}</span><div style="font-size:10.5px; color:var(--text-muted); margin-top:4px;">${shooter ? `👤 ${esc(shooter.name)}` : ''}</div></div>
           </div>`;
-        }).join('')}</div>` : `<div class="empty">No deliverables or shoots scheduled for today.</div>`}
+        }).join('')}</div>` : `<div class="empty">No deliverables or tasks scheduled for today.</div>`}
       </div>
 
       <div class="card">
@@ -6053,47 +6508,51 @@ window.removeRenewRow = (idx, clientId) => {
   renderMultiRenewModalContent(clientId);
 };
 
-/* ---------- 3. CONTENT STUDIO ---------- */
+/* ---------- 3. STUDIO & DELIVERABLES PIPELINE ---------- */
 function renderContentView() {
   const currentTab = STATE._workTab || 'kanban';
+  const prof = getProfessionConfig();
   const items = STATE.contentItems.slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const columns = [
-    { status: 'Idea', label: '💡 Ideas & Scripts' },
-    { status: 'Shoot Assigned', label: '🎥 Shoot Scheduled' },
-    { status: 'Editing', label: '✂️ Post-Production / Editing' },
-    { status: 'Client Approval', label: '⏳ Client Approval' },
-    { status: 'Uploaded/Posted', label: '🚀 Published' }
+    { status: 'Idea', label: '💡 Brief & Conception' },
+    { status: 'In Progress', label: '📌 In Progress / Assigned' },
+    { status: 'Under Review', label: '⚙️ Internal Review / Polish' },
+    { status: 'Client Approval', label: '⏳ Client Review & Sign-Off' },
+    { status: 'Completed / Delivered', label: '🚀 Delivered / Completed' }
   ];
 
   return `
     <div class="view-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
-      <div><h1 class="view-title">Creative Studio & Content Pipeline</h1><p class="view-sub" style="color:var(--text-secondary);">${items.length} deliverables in creative workflow</p></div>
-      <button class="btn btn-primary" id="newCntBtn"><span>+</span> Add Content / Shoot</button>
+      <div>
+        <h1 class="view-title">Deliverables & Workflow Pipeline</h1>
+        <p class="view-sub" style="color:var(--text-secondary);">${items.length} ${esc(prof.deliverableTerm.toLowerCase())} in production for ${esc(prof.shortName)}</p>
+      </div>
+      <button class="btn btn-primary" id="newCntBtn"><span>+</span> Add Deliverable</button>
     </div>
     <div class="tabs">
-      <div class="tab ${currentTab === 'kanban' ? 'active' : ''}" data-ctab="kanban"><span>📋</span> Kanban Pipeline</div>
-      <div class="tab ${currentTab === 'table' ? 'active' : ''}" data-ctab="table"><span>📅</span> List Schedule</div>
+      <div class="tab ${currentTab === 'kanban' ? 'active' : ''}" data-ctab="kanban"><span>📋</span> Kanban Board</div>
+      <div class="tab ${currentTab === 'table' ? 'active' : ''}" data-ctab="table"><span>📅</span> Schedule Table</div>
     </div>
     ${currentTab === 'kanban' ? `
       <div class="kanban-board">
         ${columns.map(col => {
           const colItems = items.filter(it => {
-            if (col.status === 'Shoot Assigned') return it.status === 'Shoot Assigned' || it.status === 'Shoot Done';
-            if (col.status === 'Editing') return it.status === 'Editing' || it.status === 'Edit Done';
+            if (col.status === 'In Progress') return it.status === 'In Progress' || it.status === 'Shoot Assigned' || it.status === 'Shoot Done' || it.status === 'Assigned';
+            if (col.status === 'Under Review') return it.status === 'Under Review' || it.status === 'Editing' || it.status === 'Edit Done';
             if (col.status === 'Client Approval') return it.status === 'Client Approval' || it.status === 'Approved';
+            if (col.status === 'Completed / Delivered') return it.status === 'Completed / Delivered' || it.status === 'Uploaded/Posted';
             return it.status === col.status;
           });
           return `<div class="kanban-column">
             <div class="kanban-header"><span>${col.label}</span><span class="nav-counter">${colItems.length}</span></div>
             <div class="kanban-cards-wrap">${colItems.map(it => {
               const client = STATE.clients.find(c => c.id === it.clientId);
-              const shooter = STATE.staff.find(s => s.id === it.shootById);
-              const editor = STATE.staff.find(s => s.id === it.assignedStaffId);
+              const specialist = STATE.staff.find(s => s.id === it.assignedStaffId || s.id === it.shootById);
               return `<div class="kanban-card" data-edit-cnt="${it.id}">
                 <div class="kanban-card-title">${esc(it.topic || it.type)}</div>
                 <div class="kanban-card-client">${esc(client ? client.name : 'No client')}</div>
                 <div style="display:flex; gap:4px; margin-bottom:6px;"><span class="pill pill-gray" style="font-size:10px;">${it.type}</span><span class="pill pill-brand" style="font-size:10px;">${it.status}</span></div>
-                <div class="kanban-card-meta"><span>📅 ${fmtDate(it.date)}</span><span>${shooter ? `🎥 ${esc(shooter.name.split(' ')[0])}` : ''} ${editor ? `✂️ ${esc(editor.name.split(' ')[0])}` : ''}</span></div>
+                <div class="kanban-card-meta"><span>📅 ${fmtDate(it.date)}</span><span>${specialist ? `👤 ${esc(specialist.name.split(' ')[0])}` : ''}</span></div>
                 ${it.status === 'Client Approval' && client ? `<button class="wa-btn btn-sm" style="width:100%; justify-content:center; margin-top:8px;" data-wa-appr="${it.id}">WhatsApp Approval</button>` : ''}
               </div>`;
             }).join('') || `<div class="empty" style="padding:20px 0; font-size:12px;">No items</div>`}</div>
@@ -6103,19 +6562,17 @@ function renderContentView() {
     ` : `
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Client</th><th>Date</th><th>Type</th><th>Topic / Hook</th><th>Videographer</th><th>Editor</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Client Account</th><th>Target Date</th><th>Deliverable Type</th><th>Title / Scope</th><th>Lead Specialist</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             ${items.map(it => {
               const client = STATE.clients.find(c => c.id === it.clientId);
-              const shooter = STATE.staff.find(s => s.id === it.shootById);
-              const editor = STATE.staff.find(s => s.id === it.assignedStaffId);
+              const specialist = STATE.staff.find(s => s.id === it.assignedStaffId || s.id === it.shootById);
               return `<tr>
                 <td><b>${esc(client ? client.name : '—')}</b></td>
                 <td>${fmtDate(it.date)}</td>
                 <td><span class="pill pill-gray">${it.type}</span></td>
                 <td><b>${esc(it.topic || '—')}</b></td>
-                <td>${shooter ? esc(shooter.name) : '—'}</td>
-                <td>${editor ? esc(editor.name) : '—'}</td>
+                <td>${specialist ? esc(specialist.name) : '—'}</td>
                 <td><select data-cnt-status="${it.id}" style="padding:5px; font-size:12px; border-radius:6px;">${CONTENT_STATUSES.map(s => `<option ${s === it.status ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
                 <td><div style="display:flex; gap:6px;">${it.driveLink ? `<a href="${it.driveLink}" target="_blank" class="btn btn-ghost btn-sm">📁 Link</a>` : ''} ${client ? `<button class="wa-btn btn-sm" data-wa-appr="${it.id}">WA Approval</button>` : ''} <button class="btn btn-ghost btn-sm" data-edit-cnt="${it.id}">Edit</button></div></td>
               </tr>`;
@@ -6148,19 +6605,19 @@ function attachContent() {
 function openContentModal(contentId = null) {
   const it = contentId ? STATE.contentItems.find(i => i.id === contentId) : {};
   showModal(`
-    <div class="modal-header"><h3 class="modal-title">${contentId ? 'Edit Deliverable' : 'Schedule Content / Shoot'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-header"><h3 class="modal-title">${contentId ? 'Edit Deliverable' : 'Schedule Deliverable / Task'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="field"><label>Client Account *</label><select id="f_cnt_cl">${STATE.clients.map(c => `<option value="${c.id}" ${c.id === it.clientId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field-row">
-      <div class="field"><label>Date</label><input type="date" id="f_cnt_dt" value="${it.date || todayStr()}" /></div>
-      <div class="field"><label>Type</label><select id="f_cnt_tp">${CONTENT_TYPES.map(t => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Target Date</label><input type="date" id="f_cnt_dt" value="${it.date || todayStr()}" /></div>
+      <div class="field"><label>Deliverable Type</label><select id="f_cnt_tp">${CONTENT_TYPES.map(t => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label>Topic / Hook</label><input id="f_cnt_top" value="${esc(it.topic || '')}" placeholder="e.g. 5 Signs you need a brand redesign" /></div>
+    <div class="field"><label>Deliverable Title / Topic / Scope</label><input id="f_cnt_top" value="${esc(it.topic || '')}" placeholder="e.g. Q3 Tax Audit Report / Sprint 4 Payment Gateway" /></div>
     <div class="field-row">
-      <div class="field"><label>Videographer</label><select id="f_cnt_sh"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.shootById ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
-      <div class="field"><label>Video Editor</label><select id="f_cnt_ed"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.assignedStaffId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Assigned Lead / Specialist</label><select id="f_cnt_sh"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.shootById ? 'selected' : ''}>${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
+      <div class="field"><label>Reviewer / Collaborator</label><select id="f_cnt_ed"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.assignedStaffId ? 'selected' : ''}>${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label>Status</label><select id="f_cnt_st">${CONTENT_STATUSES.map(s => `<option ${s === it.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-    <div class="field"><label>Footage / Deliverable Link</label><input id="f_cnt_lk" value="${esc(it.driveLink || '')}" placeholder="https://drive.google.com/..." /></div>
+    <div class="field"><label>Workflow Status</label><select id="f_cnt_st">${CONTENT_STATUSES.map(s => `<option ${s === it.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+    <div class="field"><label>Deliverable / Drive / Code Link</label><input id="f_cnt_lk" value="${esc(it.driveLink || '')}" placeholder="https://drive.google.com/... or https://github.com/..." /></div>
     <div class="modal-actions">
       ${contentId ? `<button class="btn btn-danger-ghost" id="delCntBtn" style="margin-right:auto;">Delete</button>` : ''}
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -7203,15 +7660,36 @@ function renderSettingsView() {
   const catalog = getServiceCatalog();
   const sbCreds = getSupabaseCreds();
   const sbConnected = isSupabaseConnected();
+  const prof = getProfessionConfig();
 
   return `
     <div class="view-header" style="margin-bottom:24px;">
-      <h1 class="view-title">Agency Settings & Cloud Database</h1>
-      <p class="view-sub" style="color:var(--text-secondary);">Enterprise agency profile, Supabase PostgreSQL sync, multi-currency engine & launch controls</p>
+      <h1 class="view-title">Enterprise Settings & Cloud Database</h1>
+      <p class="view-sub" style="color:var(--text-secondary);">Business profile, multi-profession rate cards, Supabase PostgreSQL sync & launch controls</p>
     </div>
 
-    <!-- 1. Supabase PostgreSQL Cloud Sync Manager -->
-    <div class="card" style="margin-bottom:20px; border-color:var(--brand);">
+    <!-- 1. Multi-Profession & Industry Template Card -->
+    <div class="card" style="margin-bottom:20px; border-color:var(--brand); background:linear-gradient(135deg, rgba(99,102,241,0.06), rgba(16,185,129,0.04));">
+      <div class="card-title">
+        <span style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">${prof.icon}</span>
+          Business Profession & Industry Specialization
+        </span>
+        <span class="pill pill-brand" style="font-size:11px; font-weight:800;">${esc(prof.shortName)}</span>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;">
+        AccountiX adapts to any professional workflow (<b>Chartered Accountants, IT Firms, Software Developers, Digital Agencies, Online Stores, Legal & Consulting</b>). Choose your industry to configure matching rate card templates & terminology.
+      </p>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button class="btn btn-primary" onclick="openProfessionSelectModal()">🏷️ Change Business Profession & Templates</button>
+        <button class="btn btn-signal" onclick="openSetTargetModal()">🎯 Adjust Monthly Target Goal (${fmtMoney(STATE._simTargetProfit || 150000)}/mo)</button>
+      </div>
+    </div>
+
+    <!-- 2. Supabase PostgreSQL Cloud Sync Manager -->
+    <div class="card" style="margin-bottom:20px; border-color:var(--border-card);">
       <div class="card-title">
         <span style="display:flex; align-items:center; gap:8px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M11.9 1.1L2.2 13.9c-.4.5 0 1.2.6 1.2h8.3l-1 7.8c-.1.8.9 1.2 1.4.6l9.7-12.8c.4-.5 0-1.2-.6-1.2h-8.3l1-7.8c.1-.8-.9-1.2-1.4-.7z" fill="#10b981"/></svg>
@@ -7221,7 +7699,7 @@ function renderSettingsView() {
       </div>
 
       <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;">
-        Connect your Supabase project to synchronize all clients, retainers, payments, payroll, and tasks in real time across multiple devices and team members.
+        Connect your Supabase project to synchronize all client accounts, contracts, payments, payroll, and tasks in real time across multiple devices and team members.
       </p>
 
       <div class="field-row">
@@ -7244,15 +7722,15 @@ function renderSettingsView() {
       </div>
     </div>
 
-    <!-- 2. Agency Identity Card -->
+    <!-- 3. Enterprise Identity Card -->
     <div class="card" style="margin-bottom:20px;">
-      <div class="card-title"><span>🏢 Executive Agency Profile</span></div>
+      <div class="card-title"><span>🏢 Practice & Business Profile</span></div>
       <div class="field-row">
-        <div class="field"><label>Agency Name *</label><input id="f_st_name" value="${esc(s.agencyName || 'AccountiX')}" required /></div>
-        <div class="field"><label>Tagline / Positioning</label><input id="f_st_tag" value="${esc(s.tagline || 'Agency Business OS & Financial Engine')}" /></div>
+        <div class="field"><label>Business / Firm Name *</label><input id="f_st_name" value="${esc(s.agencyName || 'AccountiX')}" required /></div>
+        <div class="field"><label>Tagline / Positioning</label><input id="f_st_tag" value="${esc(s.tagline || prof.tagline)}" /></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Managing Director / Owner</label><input id="f_st_owner" value="${esc(s.ownerName || 'Managing Director')}" /></div>
+        <div class="field"><label>Managing Director / Lead Partner</label><input id="f_st_owner" value="${esc(s.ownerName || 'Managing Director')}" /></div>
         <div class="field"><label>Official Contact Phone</label><input id="f_st_ph" value="${esc(s.phone || '+91 98765 43210')}" /></div>
       </div>
       <div class="field-row">
@@ -7261,15 +7739,26 @@ function renderSettingsView() {
       </div>
       <div class="field-row">
         <div class="field"><label>Theme Appearance</label><select id="f_st_thm"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Executive Obsidian (Dark Mode - Default)</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Clean Slate (Light Mode)</option></select></div>
+        <div class="field">
+          <label>Business Industry Category</label>
+          <select id="f_st_prof_select" onchange="applyIndustryTemplate(this.value)">
+            ${Object.values(INDUSTRY_CONFIGS).map(c => `
+              <option value="${c.id}" ${c.id === prof.id ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>
+            `).join('')}
+          </select>
+        </div>
       </div>
-      <div style="display:flex; justify-content:flex-end;"><button class="btn btn-primary" id="saveProfBtn">Save Agency Profile</button></div>
+      <div style="display:flex; justify-content:flex-end;"><button class="btn btn-primary" id="saveProfBtn">Save Business Profile</button></div>
     </div>
 
-    <!-- 3. Pricing Catalog Manager -->
+    <!-- 4. Pricing Catalog Manager -->
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">
-        <span>🏷️ Manager Package Rate Card (${catalog.length} Services)</span>
-        <button class="btn btn-primary btn-sm" onclick="openEditServiceCatalogModal()">+ Add New Service</button>
+        <span>🏷️ ${esc(prof.shortName)} Rate Card (${catalog.length} Active Services)</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="openProfessionSelectModal()">Load Templates ▾</button>
+          <button class="btn btn-primary btn-sm" onclick="openEditServiceCatalogModal()">+ Add New Service</button>
+        </div>
       </div>
       <div style="display:flex; flex-wrap:wrap; gap:8px;">
         ${catalog.map(sc => `
@@ -7284,7 +7773,7 @@ function renderSettingsView() {
       </div>
     </div>
 
-    <!-- 4. Data Portability & Backup -->
+    <!-- 5. Data Portability & Backup -->
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title"><span>💾 Database Portability & Backups</span></div>
       <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;">
@@ -7297,11 +7786,11 @@ function renderSettingsView() {
       </div>
     </div>
 
-    <!-- 5. Launch Readiness & Danger Zone -->
+    <!-- 6. Launch Readiness & Danger Zone -->
     <div class="card" style="border-color:var(--border-card);">
       <div class="card-title"><span style="color:var(--accent-amber);">🚀 Production Launch Controls</span></div>
       <p style="font-size:13px; color:var(--text-secondary); margin-bottom:14px;">
-        Ready to launch with real agency clients? Clear the sample demonstration dataset while keeping your manager rate card, team roster, and Supabase connection intact.
+        Ready to launch with your real clients? Clear dummy records while keeping your customized rate cards, profession settings, and Supabase connection intact.
       </p>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-primary" id="launchCleanBtn">🧹 Start Clean Production Database</button>
@@ -7315,18 +7804,20 @@ function renderSettingsView() {
 function attachSettings() {
   document.getElementById('saveProfBtn').onclick = () => {
     const thm = document.getElementById('f_st_thm').value;
+    const profKey = (document.getElementById('f_st_prof_select') ? document.getElementById('f_st_prof_select').value : '') || (STATE.settings && STATE.settings.profession) || 'general';
     STATE.settings = {
       agencyName: document.getElementById('f_st_name').value.trim() || 'AccountiX',
-      tagline: document.getElementById('f_st_tag').value.trim() || 'Agency Business OS',
+      tagline: document.getElementById('f_st_tag').value.trim() || 'Business Operating System',
       ownerName: document.getElementById('f_st_owner').value.trim() || 'Managing Director',
       phone: document.getElementById('f_st_ph').value.trim(),
       email: document.getElementById('f_st_em').value.trim(),
       theme: thm,
+      profession: profKey,
       currencySymbol: document.getElementById('f_st_curr').value.trim() || '₹'
     };
     document.documentElement.setAttribute('data-theme', thm);
     saveState();
-    toast('Agency settings saved successfully');
+    toast('Business settings saved successfully');
     render();
   };
 

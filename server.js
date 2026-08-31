@@ -203,33 +203,62 @@ function getUserWorkspace(db, userOrKey) {
   if (compKey && db.workspaces[compKey]) {
     return db.workspaces[compKey];
   }
-  // 3. If user is Jeet Rakholiya or admin, prioritize comp_1 / primary workspace
-  if (emailKey && (emailKey.includes('jeet') || emailKey.includes('admin') || compKey === 'comp_1')) {
+  // 3. If user is the demo founder/seed profile, provide demo template workspace
+  if (emailKey && (emailKey === 'jeet@accountix.agency' || emailKey === 'admin@accountix.agency' || compKey === 'comp_1')) {
     if (db.workspaces['comp_1']) return db.workspaces['comp_1'];
+    return {
+      clients: db.clients || [],
+      packages: db.packages || [],
+      payments: db.payments || [],
+      expenses: db.expenses || [],
+      staff: db.staff || [],
+      attendance: db.attendance || [],
+      salaryPayments: db.salaryPayments || [],
+      tasks: db.tasks || [],
+      contentItems: db.contentItems || [],
+      leads: db.leads || [],
+      serviceCatalog: db.serviceCatalog || [],
+      settings: db.settings || {
+        agencyName: 'AccountiX Business OS',
+        tagline: 'Multi-Profession Business OS & Financial Engine',
+        phone: '+91 98765 43210',
+        email: emailKey || 'hello@accountix.agency',
+        currencySymbol: '₹',
+        theme: 'dark'
+      }
+    };
   }
 
-  // Default workspace data
-  return {
-    clients: db.clients || [],
-    packages: db.packages || [],
-    payments: db.payments || [],
-    expenses: db.expenses || [],
-    staff: db.staff || [],
-    attendance: db.attendance || [],
-    salaryPayments: db.salaryPayments || [],
-    tasks: db.tasks || [],
-    contentItems: db.contentItems || [],
-    leads: db.leads || [],
-    serviceCatalog: db.serviceCatalog || [],
-    settings: db.settings || {
-      agencyName: 'AccountiX',
-      tagline: 'Agency Business OS & Financial Engine',
-      phone: '+91 98765 43210',
-      email: emailKey || 'hello@accountix.agency',
+  // 4. Default Clean Reset Workspace for all real users & new signups
+  const cleanWs = {
+    clients: [],
+    packages: [],
+    payments: [],
+    expenses: [],
+    staff: [],
+    attendance: [],
+    salaryPayments: [],
+    tasks: [],
+    contentItems: [],
+    leads: [],
+    userData: [],
+    serviceCatalog: [],
+    settings: {
+      agencyName: 'My Enterprise',
+      profession: 'General Business & Consulting',
+      tagline: 'Business Operating System & Financial Engine',
+      phone: '',
+      email: emailKey || '',
       currencySymbol: '₹',
       theme: 'dark'
     }
   };
+  
+  if (emailKey) {
+    db.workspaces[emailKey] = cleanWs;
+    writeDb(db);
+  }
+  return cleanWs;
 }
 
 // Initialize database file
