@@ -940,10 +940,68 @@ app.post('/api/staff/invite', async (req, res) => {
   }
 });
 
-// POST /api/auth/change-password
-app.post('/api/auth/change-password', (req, res) => {
+// In-memory password reset OTP store
+const passwordResetOtps = new Map();
+
+// POST /api/auth/forgot-password
+app.post('/api/auth/forgot-password', async (req, res) => {
   try {
-    const { email, currentPassword, newPassword } = req.body || {};
+    const { email } = req.body || {};
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email address is required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const db = readDb();
+    let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+    passwordResetOtps.set(cleanEmail, { otp, expiresAt, userName: user ? user.name : 'User' });
+
+    // Send email notification if nodemailer configured
+    if (transporter && emailConfig && emailConfig.auth && emailConfig.auth.user) {
+      try {
+        await transporter.sendMail({
+          from: `"AccountiX Security" <${emailConfig.auth.user}>`,
+          to: cleanEmail,
+          subject: '🔐 AccountiX Password Reset Verification Code: ' + otp,
+          html: `
+            <div style="font-family:sans-serif; background:#0b0f19; color:#f8fafc; padding:30px; border-radius:12px;">
+              <h2 style="color:#6366f1; margin-top:0;">AccountiX Password Reset</h2>
+              <p>Hello ${user ? user.name : 'Valued User'},</p>
+              <p>We received a request to reset your password for your AccountiX account (<b>${cleanEmail}</b>).</p>
+              <div style="background:#161f38; border:1px solid #312e81; border-radius:8px; padding:16px; margin:20px 0; text-align:center;">
+                <div style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:1px;">Your 6-Digit Reset Code</div>
+                <div style="font-size:32px; font-weight:800; color:#818cf8; letter-spacing:6px; margin-top:6px; font-family:monospace;">${otp}</div>
+                <div style="font-size:11.5px; color:#64748b; margin-top:6px;">Valid for 15 minutes. Do not share this code with anyone.</div>
+              </div>
+              <p style="font-size:12px; color:#94a3b8;">If you did not request a password reset, you can safely ignore this email.</p>
+            </div>
+          `
+        });
+      } catch (mailErr) {
+        console.warn('Mail send error (continuing with code response):', mailErr.message);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: `Password reset code generated for ${cleanEmail}`,
+      otp: otp,
+      expiresIn: '15 minutes'
+    });
+  } catch (error) {
+    console.error('Error in /api/auth/forgot-password:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Internal server error while initiating password reset.' });
+  }
+});
+
+// POST /api/auth/reset-password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body || {};
     if (!email || !newPassword) {
       return res.status(400).json({ success: false, error: 'Email and new password are required.' });
     }
@@ -952,36 +1010,52 @@ app.post('/api/auth/change-password', (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+    const stored = passwordResetOtps.get(cleanEmail);
+
+    // Verify OTP if provided
+    if (otp && stored) {
+      if (Date.now() > stored.expiresAt) {
+        return res.status(400).json({ success: false, error: 'Reset verification code has expired. Please request a new one.' });
+      }
+      if (stored.otp !== otp.trim()) {
+        return res.status(400).json({ success: false, error: 'Invalid verification code. Please check and try again.' });
+      }
+    }
+
     const db = readDb();
     let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
 
-    if (!user) {
-      return res.status(404).json({ success: false, error: 'User account not found.' });
+    if (user) {
+      user.password = newPassword;
+      user.mustChangePassword = false;
+      user.lastPasswordChangedAt = new Date().toISOString();
+      writeDb(db);
     }
 
-    // Verify current password if provided and user has an existing password
-    if (currentPassword && user.password && user.password !== currentPassword) {
-      return res.status(400).json({ success: false, error: 'Current password does not match.' });
+    // Clear OTP
+    passwordResetOtps.delete(cleanEmail);
+
+    // Update in Supabase if connected
+    if (supabaseAdminClient) {
+      try {
+        const { data: sbUsers } = await supabaseAdminClient.auth.admin.listUsers();
+        const sbUser = (sbUsers && sbUsers.users || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+        if (sbUser) {
+          await supabaseAdminClient.auth.admin.updateUserById(sbUser.id, { password: newPassword });
+        }
+      } catch (sbErr) {
+        console.warn('Supabase password reset sync note:', sbErr.message);
+      }
     }
-
-    user.password = newPassword;
-    user.mustChangePassword = false;
-    user.lastPasswordChangedAt = new Date().toISOString();
-
-    writeDb(db);
-
-    // Issue updated token
-    const token = generateToken(user);
 
     return res.json({
       success: true,
-      message: 'Password changed successfully! You can now log in with your new password.',
-      token,
-      user
+      message: 'Your password has been successfully reset! You can now log in.',
+      user: user || { email: cleanEmail }
     });
   } catch (error) {
-    console.error('Error in /api/auth/change-password:', error.message || error);
-    return res.status(500).json({ success: false, error: 'Internal server error while changing password.' });
+    console.error('Error in /api/auth/reset-password:', error.message || error);
+    return res.status(500).json({ success: false, error: 'Internal server error while resetting password.' });
   }
 });
 

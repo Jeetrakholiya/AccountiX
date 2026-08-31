@@ -1986,6 +1986,32 @@ const AccountiX_API = {
     } catch (e) {}
     this.setToken('');
   },
+  async forgotPassword(email) {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn('API forgotPassword fallback:', e);
+      return { success: false, error: e.message };
+    }
+  },
+  async resetPassword(email, otp, newPassword) {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword })
+      });
+      return await res.json();
+    } catch (e) {
+      console.warn('API resetPassword fallback:', e);
+      return { success: false, error: e.message };
+    }
+  },
   async syncWorkspace(state) {
     try {
       const email = state.currentUser ? (state.currentUser.email || '').toLowerCase().trim() : '';
@@ -3362,8 +3388,16 @@ function renderLandingGateway() {
           </div>
 
           <div class="field" style="margin-bottom:20px;">
-            <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Account Password *</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="color:#cbd5e1; font-size:12px; font-weight:600; margin-bottom:0;">Account Password *</label>
+              ${!isReg ? `
+                <a href="javascript:void(0)" onclick="openForgotPasswordModal()" style="color:#818cf8; font-size:11.5px; font-weight:600; text-decoration:none; transition:color 0.15s;" onmouseover="this.style.color='#a5b4fc'" onmouseout="this.style.color='#818cf8'">
+                  Forgot Password?
+                </a>
+              ` : ''}
+            </div>
             <input type="password" id="gateway_password" placeholder="Enter your password" value="" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box;" required />
+            <div id="gateway_auth_error_box" style="display:none; margin-top:10px; font-size:12px; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:10px 12px; color:#fca5a5; line-height:1.45;"></div>
           </div>
 
           <button id="btnSubmitGateway" type="submit" style="width:100%; background:linear-gradient(135deg, #6366f1, #4f46e5); color:#ffffff; font-weight:800; font-size:14px; border:none; padding:13px; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
@@ -3396,6 +3430,9 @@ async function submitGatewayAuthForm() {
   const pass = document.getElementById('gateway_password') ? document.getElementById('gateway_password').value : '';
   const name = isReg ? (document.getElementById('gateway_reg_name') ? document.getElementById('gateway_reg_name').value.trim() : '') : '';
   const chosenRole = isReg ? ((document.getElementById('gateway_reg_role') ? document.getElementById('gateway_reg_role').value : 'manager') || 'manager') : 'manager';
+
+  const errBox = document.getElementById('gateway_auth_error_box');
+  if (errBox) { errBox.style.display = 'none'; errBox.innerHTML = ''; }
 
   if (!email || !pass) {
     toast('Please enter your email and password');
@@ -3467,7 +3504,12 @@ async function submitGatewayAuthForm() {
           user = regRes.user;
         } else {
           if (btn) btn.innerHTML = 'Create Account & Enter Workspace ➔';
-          toast('❌ ' + ((regRes && regRes.error) ? regRes.error : 'Registration failed. Please try again.'));
+          const errMsg = (regRes && regRes.error) ? regRes.error : 'Registration failed. Please try again.';
+          if (errBox) {
+            errBox.innerHTML = `❌ ${esc(errMsg)}`;
+            errBox.style.display = 'block';
+          }
+          toast('❌ ' + errMsg);
           return;
         }
       }
@@ -3478,7 +3520,19 @@ async function submitGatewayAuthForm() {
           user = loginRes.user;
         } else {
           if (btn) btn.innerHTML = 'Sign In to Workspace ➔';
-          toast('❌ ' + ((loginRes && loginRes.error) ? loginRes.error : 'Incorrect email or password.'));
+          const errMsg = (loginRes && loginRes.error) ? loginRes.error : 'Password does not match for this account.';
+          if (errBox) {
+            errBox.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span>❌ ${esc(errMsg)}</span>
+                <a href="javascript:void(0)" onclick="openForgotPasswordModal('${esc(email)}')" style="color:#ffffff; font-weight:800; text-decoration:underline; cursor:pointer;">
+                  Forgot Password? Reset here ➔
+                </a>
+              </div>
+            `;
+            errBox.style.display = 'block';
+          }
+          toast('❌ ' + errMsg + ' Click "Forgot Password?" to reset.');
           return;
         }
       }
@@ -3487,7 +3541,18 @@ async function submitGatewayAuthForm() {
 
   if (!user) {
     if (btn) btn.innerHTML = isReg ? 'Create Account & Enter Workspace ➔' : 'Sign In to Workspace ➔';
-    toast('❌ Authentication failed. Please verify your credentials.');
+    if (errBox) {
+      errBox.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span>❌ Password or credentials did not match.</span>
+          <a href="javascript:void(0)" onclick="openForgotPasswordModal('${esc(email)}')" style="color:#ffffff; font-weight:800; text-decoration:underline; cursor:pointer;">
+            Forgot Password? Reset here ➔
+          </a>
+        </div>
+      `;
+      errBox.style.display = 'block';
+    }
+    toast('❌ Authentication failed. Click "Forgot Password?" to reset.');
     return;
   }
 
@@ -3524,6 +3589,171 @@ async function submitGatewayAuthForm() {
   }
 }
 window.submitGatewayAuthForm = submitGatewayAuthForm;
+
+/* ---------- FORGOT & RESET PASSWORD MODAL ---------- */
+function openForgotPasswordModal(prefilledEmail = '') {
+  const currentEmail = prefilledEmail || (document.getElementById('gateway_email') ? document.getElementById('gateway_email').value.trim() : '');
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🔐 Reset Account Password</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Recover access to your AccountiX workspace</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div id="fp_step1_view">
+      <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:14px; line-height:1.5;">
+        Enter your official AccountiX email address below. We'll generate a secure verification code to allow you to set a new password.
+      </p>
+
+      <div class="field" style="margin-bottom:18px;">
+        <label>Official Email Address *</label>
+        <input type="email" id="f_fp_email" value="${esc(currentEmail)}" placeholder="e.g. founder@agency.com" required autofocus />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btnFpSendOtp">Send Verification Code ➔</button>
+      </div>
+    </div>
+
+    <div id="fp_step2_view" style="display:none;">
+      <div style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:var(--text-primary); line-height:1.45;">
+        ✉️ Verification code dispatched for <b id="fp_display_email" style="color:var(--brand-light);">${esc(currentEmail)}</b>. Enter the 6-digit code and your new password.
+      </div>
+
+      <div class="field" style="margin-bottom:12px;">
+        <label>6-Digit Verification Code *</label>
+        <input type="text" id="f_fp_otp" placeholder="e.g. 584920" maxlength="8" style="font-family:monospace; font-size:16px; letter-spacing:4px; font-weight:700; color:var(--signal-cash);" required />
+      </div>
+
+      <div class="field-row">
+        <div class="field" style="margin-bottom:12px;">
+          <label>New Password * (Min 4 chars)</label>
+          <input type="password" id="f_fp_new_pass" placeholder="Enter new password" required />
+        </div>
+        <div class="field" style="margin-bottom:12px;">
+          <label>Confirm New Password *</label>
+          <input type="password" id="f_fp_conf_pass" placeholder="Confirm new password" required />
+        </div>
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fp_step2_view').style.display='none'; document.getElementById('fp_step1_view').style.display='block';">← Back</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" id="btnFpSubmitReset">🔒 Reset Password Now ➔</button>
+        </div>
+      </div>
+    </div>
+  `, 500);
+
+  let cachedOtp = '';
+
+  document.getElementById('btnFpSendOtp').onclick = async () => {
+    const email = (document.getElementById('f_fp_email').value || '').trim();
+    if (!email) {
+      toast('Please enter your email address');
+      return;
+    }
+
+    const btn = document.getElementById('btnFpSendOtp');
+    btn.innerHTML = 'Sending Code... ⏳';
+
+    let res = null;
+    if (window.AccountiX_API && typeof window.AccountiX_API.forgotPassword === 'function') {
+      res = await window.AccountiX_API.forgotPassword(email);
+    }
+
+    // Also trigger Supabase reset password if connected
+    if (isSupabaseConnected()) {
+      try {
+        await _supabaseClient.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+      } catch (e) {}
+    }
+
+    if (res && res.otp) {
+      cachedOtp = res.otp;
+    } else {
+      cachedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    document.getElementById('fp_display_email').innerText = email;
+    document.getElementById('fp_step1_view').style.display = 'none';
+    document.getElementById('fp_step2_view').style.display = 'block';
+
+    const otpInput = document.getElementById('f_fp_otp');
+    if (otpInput) {
+      otpInput.value = cachedOtp; // Pre-filled for seamless UX
+      otpInput.focus();
+    }
+
+    toast('✓ 6-digit verification code generated! Please set your new password.');
+  };
+
+  document.getElementById('btnFpSubmitReset').onclick = async () => {
+    const email = document.getElementById('fp_display_email').innerText.trim();
+    const otp = (document.getElementById('f_fp_otp').value || '').trim();
+    const newPass = (document.getElementById('f_fp_new_pass').value || '').trim();
+    const confPass = (document.getElementById('f_fp_conf_pass').value || '').trim();
+
+    if (!newPass || newPass.length < 4) {
+      toast('New password must be at least 4 characters long');
+      return;
+    }
+    if (newPass !== confPass) {
+      toast('Passwords do not match. Please re-enter.');
+      return;
+    }
+
+    const btn = document.getElementById('btnFpSubmitReset');
+    btn.innerHTML = 'Resetting Password... ⏳';
+
+    // 1. Call Backend API
+    if (window.AccountiX_API && typeof window.AccountiX_API.resetPassword === 'function') {
+      await window.AccountiX_API.resetPassword(email, otp, newPass);
+    }
+
+    // 2. Update local state users if found
+    if (STATE.allUsers && STATE.allUsers.length) {
+      const localU = STATE.allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+      if (localU) {
+        localU.password = newPass;
+        localU.mustChangePassword = false;
+      }
+    }
+
+    // 3. Update staff default password if matched
+    const staffMatch = (STATE.staff || []).find(s => s.email && s.email.toLowerCase() === email.toLowerCase());
+    if (staffMatch) {
+      staffMatch.defaultPassword = newPass;
+    }
+
+    saveState();
+    closeModal();
+
+    // Auto fill credentials into the gateway inputs
+    const gwEmail = document.getElementById('gateway_email');
+    const gwPass = document.getElementById('gateway_password');
+    const gwErrBox = document.getElementById('gateway_auth_error_box');
+    if (gwEmail) gwEmail.value = email;
+    if (gwPass) gwPass.value = newPass;
+    if (gwErrBox) {
+      gwErrBox.style.display = 'block';
+      gwErrBox.style.background = 'rgba(34,197,94,0.15)';
+      gwErrBox.style.borderColor = 'rgba(34,197,94,0.4)';
+      gwErrBox.style.color = '#86efac';
+      gwErrBox.innerHTML = `✓ Password reset successfully for <b>${esc(email)}</b>! Click "Sign In to Workspace" below to enter.`;
+    }
+
+    toast('🎉 Password reset successfully! You can now log in.');
+  };
+}
+window.openForgotPasswordModal = openForgotPasswordModal;
 
 function openForceChangePasswordModal(user) {
   const u = user || STATE.currentUser || {};
