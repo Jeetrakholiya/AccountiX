@@ -179,10 +179,33 @@ function authenticateToken(req, res, next) {
 }
 
 // Helper: Get User Workspace
-function getUserWorkspace(db, key) {
-  if (db.workspaces && db.workspaces[key]) {
-    return db.workspaces[key];
+function getUserWorkspace(db, userOrKey) {
+  if (!db.workspaces) db.workspaces = {};
+  
+  let emailKey = '';
+  let compKey = '';
+  
+  if (typeof userOrKey === 'object' && userOrKey !== null) {
+    emailKey = (userOrKey.email || '').toLowerCase().trim();
+    compKey = userOrKey.companyId || '';
+  } else if (typeof userOrKey === 'string') {
+    if (userOrKey.includes('@')) emailKey = userOrKey.toLowerCase().trim();
+    else compKey = userOrKey;
   }
+
+  // 1. Check workspace stored by email
+  if (emailKey && db.workspaces[emailKey]) {
+    return db.workspaces[emailKey];
+  }
+  // 2. Check workspace stored by companyId
+  if (compKey && db.workspaces[compKey]) {
+    return db.workspaces[compKey];
+  }
+  // 3. If user is Jeet Rakholiya or admin, prioritize comp_1 / primary workspace
+  if (emailKey && (emailKey.includes('jeet') || emailKey.includes('admin') || compKey === 'comp_1')) {
+    if (db.workspaces['comp_1']) return db.workspaces['comp_1'];
+  }
+
   // Default workspace data
   return {
     clients: db.clients || [],
@@ -200,7 +223,7 @@ function getUserWorkspace(db, key) {
       agencyName: 'AccountiX',
       tagline: 'Agency Business OS & Financial Engine',
       phone: '+91 98765 43210',
-      email: 'hello@accountix.agency',
+      email: emailKey || 'hello@accountix.agency',
       currencySymbol: '₹',
       theme: 'dark'
     }
@@ -274,27 +297,28 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     const cleanEmail = email.toLowerCase().trim();
+    const isFounder = cleanEmail.includes('jeet') || cleanEmail.includes('admin');
     const db = readDb();
     let user = db.allUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail);
-    const cleanRole = targetRole || (user ? user.role : 'manager');
+    const cleanRole = isFounder ? 'manager' : (targetRole || (user ? user.role : 'manager'));
 
     if (!user) {
-      const compId = `comp_${Date.now()}`;
-      const compName = cleanRole === 'admin' ? 'AccountiX Platform HQ' : `${name || cleanEmail.split('@')[0]}'s Agency`;
+      const compId = isFounder ? 'comp_1' : `comp_${Date.now()}`;
+      const compName = cleanRole === 'admin' ? 'AccountiX Platform HQ' : isFounder ? 'AccountiX Media HQ' : `${name || cleanEmail.split('@')[0]}'s Agency`;
 
       user = {
         id: `usr_google_${googleSub || Date.now()}`,
-        name: name || cleanEmail.split('@')[0],
+        name: name || (isFounder ? 'Jeet Rakholiya' : cleanEmail.split('@')[0]),
         email: cleanEmail,
         role: cleanRole,
         companyId: compId,
         companyName: compName,
-        title: cleanRole === 'admin' ? 'Platform Super Admin' : cleanRole === 'manager' ? 'Managing Director' : 'Specialist',
-        avatar: picture || (cleanRole === 'admin' ? '👑' : cleanRole === 'manager' ? '🏢' : '👥'),
+        title: isFounder ? 'Managing Director & Founder' : cleanRole === 'admin' ? 'Platform Super Admin' : cleanRole === 'manager' ? 'Managing Director' : 'Specialist',
+        avatar: picture || (isFounder ? '🏢' : '👤'),
         lastActiveAt: new Date().toISOString(),
         status: 'Active',
         purchasedDate: new Date().toISOString().split('T')[0],
-        plan: 'Enterprise Suite',
+        plan: '1 Year Plan',
         authProvider: 'google'
       };
       db.allUsers.push(user);
@@ -314,6 +338,10 @@ app.post('/api/auth/google', async (req, res) => {
       user.lastActiveAt = new Date().toISOString();
       if (picture && (!user.avatar || user.avatar.length < 5)) user.avatar = picture;
       if (name && (!user.name || user.name.length < 2)) user.name = name;
+      if (isFounder) {
+        user.companyId = 'comp_1';
+        user.role = 'manager';
+      }
     }
 
     const token = generateToken(user);
@@ -337,8 +365,7 @@ app.post('/api/auth/google', async (req, res) => {
     db.loginLogs.unshift(logEntry);
     if (db.loginLogs.length > 100) db.loginLogs = db.loginLogs.slice(0, 100);
 
-    const workspaceKey = user.companyId || user.id || 'comp_1';
-    const workspaceData = getUserWorkspace(db, workspaceKey);
+    const workspaceData = getUserWorkspace(db, user);
 
     writeDb(db);
 
@@ -611,6 +638,7 @@ app.delete('/api/admin/logs', (req, res) => {
 // 9. Multi-Tenant Workspace Sync Engine (Save per user/company across all devices)
 app.post('/api/workspace/sync', async (req, res) => {
   const incoming = req.body || {};
+  const emailKey = (incoming.email || (req.user ? req.user.email : '') || '').toLowerCase().trim();
   const companyKey = incoming.companyId || (req.user ? req.user.companyId : null) || 'comp_1';
 
   const db = readDb();
@@ -631,10 +659,12 @@ app.post('/api/workspace/sync', async (req, res) => {
     settings: incoming.settings || {}
   };
 
-  db.workspaces[companyKey] = workspacePayload;
+  if (companyKey) db.workspaces[companyKey] = workspacePayload;
+  if (emailKey) db.workspaces[emailKey] = workspacePayload;
 
-  // Also sync to global root if comp_1 or primary tenant
-  if (companyKey === 'comp_1') {
+  // Also sync to global root if comp_1 or founder
+  if (companyKey === 'comp_1' || (emailKey && (emailKey.includes('jeet') || emailKey.includes('admin')))) {
+    db.workspaces['comp_1'] = workspacePayload;
     Object.assign(db, workspacePayload);
   }
   if (incoming.companies && incoming.companies.length) {
