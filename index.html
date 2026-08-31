@@ -5945,7 +5945,8 @@ function openStaffModal(staffId = null) {
       empUser.staffId = targetStaffId;
     }
 
-    // Trigger Gmail Invite if selected
+    let inviteData = null;
+    // Trigger Invite if selected
     if (shouldSendEmail && window.AccountiX_API && typeof window.AccountiX_API.inviteStaff === 'function') {
       try {
         const inviteRes = await window.AccountiX_API.inviteStaff({
@@ -5958,9 +5959,7 @@ function openStaffModal(staffId = null) {
           staffId: targetStaffId,
           baseSalary
         });
-        if (inviteRes && inviteRes.success) {
-          toast(`✉️ Invite & temporary password sent to ${email}!`);
-        }
+        inviteData = inviteRes;
       } catch(e) {
         console.warn('Invite trigger fallback:', e);
       }
@@ -5968,8 +5967,18 @@ function openStaffModal(staffId = null) {
 
     saveState();
     closeModal();
-    toast(`✓ Staff member "${nm}" saved & enabled with default password "${pass}"! 🎉`);
     render();
+
+    openStaffInviteSuccessModal({
+      name: nm,
+      role,
+      email,
+      password: pass,
+      gmailComposeUrl: inviteData ? inviteData.gmailComposeUrl : null,
+      mailtoUrl: inviteData ? inviteData.mailtoUrl : null,
+      plainText: inviteData ? inviteData.plainText : null,
+      provider: inviteData ? inviteData.provider : 'email'
+    });
   };
 
   const dBtn = document.getElementById('delStBtn');
@@ -5984,6 +5993,61 @@ function openStaffModal(staffId = null) {
     };
   }
 }
+
+function openStaffInviteSuccessModal({ name, role, email, password, gmailComposeUrl, mailtoUrl, plainText, provider }) {
+  const isCloudSent = provider === 'supabase_admin' || provider === 'supabase_auth' || provider === 'gmail_smtp';
+  const defaultGmailUrl = gmailComposeUrl || `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(`🎉 Welcome to ${STATE.settings.agencyName || 'AccountiX'} — Staff Portal Access`)}&body=${encodeURIComponent(`Hi ${name},\n\nYou have been invited to join ${STATE.settings.agencyName || 'AccountiX'} on AccountiX as ${role}.\n\nPortal Login URL: ${window.location.origin}\nYour Email ID: ${email}\nTemporary Default Password: ${password}\n\nPlease log in and you will be prompted to create your new personal password upon first sign-in.\n\nWarm regards,\n${STATE.settings.agencyName || 'AccountiX'}`)}`;
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">🎉 Team Member Provisioned!</h3>
+        <div style="font-size:12px; color:var(--text-muted);">${esc(name)} · ${esc(role)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div style="background:${isCloudSent ? 'rgba(16,185,129,0.08)' : 'rgba(99,102,241,0.08)'}; border:1px solid ${isCloudSent ? 'rgba(16,185,129,0.25)' : 'rgba(99,102,241,0.25)'}; border-radius:12px; padding:14px; margin-bottom:18px;">
+      <div style="display:flex; align-items:center; gap:8px; font-weight:700; color:${isCloudSent ? 'var(--signal-cash)' : 'var(--brand-light)'}; margin-bottom:4px; font-size:13px;">
+        <span>${isCloudSent ? '✅' : '✉️'}</span>
+        <span>${isCloudSent ? 'Cloud Invite Dispatched!' : 'Staff Account Ready & Direct Email Available'}</span>
+      </div>
+      <div style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
+        ${isCloudSent 
+          ? `Official welcome invitation sent to <b>${esc(email)}</b>.` 
+          : `Employee account is active with temporary password. You can also open Gmail with 1 click below.`}
+      </div>
+    </div>
+
+    <!-- Credentials Card -->
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:14px 16px; margin-bottom:18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--border-subtle); font-size:12.5px;">
+        <span style="color:var(--text-muted); font-weight:600;">Staff Login ID:</span>
+        <b class="mono" style="color:var(--text-primary);">${esc(email)}</b>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; font-size:12.5px;">
+        <span style="color:var(--text-muted); font-weight:600;">Default Password:</span>
+        <b class="mono" style="color:var(--signal-cash); font-size:14px; letter-spacing:0.5px;">${esc(password)}</b>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+      <a href="${defaultGmailUrl}" target="_blank" class="btn btn-primary" style="text-decoration:none; text-align:center; padding:12px; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span>Open in Gmail (Pre-Filled & Ready) ➔</span>
+      </a>
+
+      <button class="btn btn-ghost" onclick="navigator.clipboard.writeText('Hi ${esc(name)},\\n\\nWelcome to ${esc(STATE.settings.agencyName || 'AccountiX')}!\\n\\nPortal Login: ${window.location.origin}\\nEmail: ${esc(email)}\\nTemporary Password: ${esc(password)}\\n\\nPlease log in and you can change your password.'); toast('✓ Copied invite message & password to clipboard!');" style="padding:10px; font-weight:700; font-size:12px;">
+        📋 Copy Invite Message & Password
+      </button>
+    </div>
+
+    <div class="modal-actions" style="border-top:1px solid var(--border-subtle); padding-top:14px; margin-top:0;">
+      <button class="btn btn-signal" onclick="closeModal()" style="width:100%;">Done & Return to Team Roster ✓</button>
+    </div>
+  `, 500);
+}
+window.openStaffInviteSuccessModal = openStaffInviteSuccessModal;
 function openPaySalaryModal(staffId) {
   const s = STATE.staff.find(st => st.id === staffId);
   if (!s) return;

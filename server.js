@@ -831,10 +831,16 @@ app.post('/api/staff/invite', async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Welcome invite & temporary credentials sent to ${cleanEmail}!`,
+      message: mailResult.provider === 'supabase_admin' || mailResult.provider === 'supabase_auth' 
+        ? `✓ Official invitation dispatched to ${cleanEmail} via Supabase Cloud Email!`
+        : `Welcome invite & temporary credentials generated for ${cleanEmail}!`,
       temporaryPassword: tempPass,
       user,
-      devMode: !!mailResult.devMode
+      provider: mailResult.provider || 'email',
+      devMode: !!mailResult.devMode,
+      gmailComposeUrl: mailResult.gmailComposeUrl,
+      mailtoUrl: mailResult.mailtoUrl,
+      plainText: mailResult.plainText
     });
   } catch (error) {
     console.error('Error in /api/staff/invite:', error.message || error);
