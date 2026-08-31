@@ -2900,7 +2900,7 @@ function openGoogleClientConnectModal(targetRole = 'manager', existingClientId =
     </div>
   `, 500);
 
-  document.getElementById('btnSaveAndLaunchGoogle').onclick = () => {
+  document.getElementById('btnSaveAndLaunchGoogle').onclick = async () => {
     const idVal = (document.getElementById('f_google_client_id_val').value || '').trim();
     if (!idVal) {
       toast('Please paste your Google Client ID');
@@ -2910,8 +2910,18 @@ function openGoogleClientConnectModal(targetRole = 'manager', existingClientId =
     STATE.settings.googleClientId = idVal;
     localStorage.setItem('accountix_google_client_id', idVal);
     saveState();
+
+    // Sync to backend so all other devices & visitors load it automatically
+    try {
+      await fetch('/api/auth/google/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: idVal })
+      });
+    } catch(e) {}
+
     closeModal();
-    toast('✓ Google Client ID saved! Opening Google popup...');
+    toast('✓ Google Client ID synced globally! Opening Google popup...');
     initGoogleGIS(idVal);
     setTimeout(() => {
       if (_googleTokenClient) {

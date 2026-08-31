@@ -251,12 +251,32 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Google Cloud Console OAuth 2.0 Configuration
+// Google Cloud Console OAuth 2.0 Configuration (Global Multi-Device Sync)
 app.get('/api/auth/google/config', (req, res) => {
+  const db = readDb();
+  const dbClientId = (db.settings && db.settings.googleClientId) || (db.workspaces && db.workspaces.comp_1 && db.workspaces.comp_1.settings && db.workspaces.comp_1.settings.googleClientId) || '';
+  const clientId = process.env.GOOGLE_CLIENT_ID || dbClientId || '';
   res.json({
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    configured: Boolean(process.env.GOOGLE_CLIENT_ID)
+    clientId: clientId,
+    configured: Boolean(clientId)
   });
+});
+
+app.post('/api/auth/google/config', (req, res) => {
+  const { clientId } = req.body || {};
+  if (!clientId || typeof clientId !== 'string') {
+    return res.status(400).json({ success: false, error: 'Valid Google Client ID is required' });
+  }
+  const db = readDb();
+  if (!db.settings) db.settings = {};
+  db.settings.googleClientId = clientId.trim();
+  if (db.workspaces && db.workspaces.comp_1) {
+    if (!db.workspaces.comp_1.settings) db.workspaces.comp_1.settings = {};
+    db.workspaces.comp_1.settings.googleClientId = clientId.trim();
+  }
+  writeDb(db);
+  console.log('✓ Google OAuth Client ID saved globally on server:', clientId.trim());
+  res.json({ success: true, clientId: clientId.trim() });
 });
 
 // Google Cloud Console OAuth 2.0 Verification & Login
