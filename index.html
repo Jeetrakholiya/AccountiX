@@ -3514,13 +3514,6 @@ function renderLandingGateway() {
           `}
         </div>
 
-        <!-- Cross-Device Cloud Sync Link -->
-        <div style="text-align:center; margin-top:16px; padding-top:14px; border-top:1px solid #1e293b;">
-          <a href="javascript:void(0)" onclick="openSupabaseCloudModal()" style="font-size:12px; color:#10b981; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:6px; cursor:pointer;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-            <span>☁️</span> Connect Supabase Cloud (Multi-Device Sync)
-          </a>
-        </div>
-
       </div>
 
       <!-- Footer -->
@@ -4605,7 +4598,8 @@ function renderAdminOverviewView() {
         <h1 class="view-title">👑 SaaS Platform Hub</h1>
         <p class="view-sub" style="color:var(--text-secondary);">Agency tenants, MRR pulse & user activity metrics</p>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="openSupabaseCloudModal()">☁️ Global Database (Supabase)</button>
         <button class="btn btn-signal" onclick="navigateTo('admin_reengage');">✉️ Re-Engage Inactive Users (${inactiveUsers.length})</button>
         <button class="btn btn-ghost" onclick="openAuthModal()">👤 Active Session</button>
       </div>

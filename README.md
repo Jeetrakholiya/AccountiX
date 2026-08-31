@@ -60,27 +60,28 @@ npm run dev
 
 ---
 
-## ⚡ Supabase Setup (3 Quick Steps)
+## ⚡ 1-Time Supabase Cloud Database Setup (Zero Config for End Users)
 
-### Step 1: Create a Supabase Project
+> 💡 **You ONLY configure this once as the platform owner.** Your customers, agency owners, and staff members **NEVER** need to know about Supabase or enter any keys.
+
+### Step 1: Get Your Free Supabase Credentials (60 Seconds)
 1. Go to [supabase.com](https://supabase.com) and create a free project.
-2. In your Supabase Dashboard, go to **Settings > API** to find your:
+2. In your Supabase Dashboard, go to **Project Settings > API** to find your:
    - **Project URL** (e.g. `https://xyzcompany.supabase.co`)
-   - **Anon Public Key** (e.g. `eyJhbGciOi...`)
+   - **anon public API Key** (e.g. `eyJhbGciOi...`)
 
-### Step 2: Run the SQL Schema
-1. In your Supabase Dashboard, open **SQL Editor** > **New Query**.
+### Step 2: Run the SQL Tables Script
+1. In your Supabase Dashboard, click **SQL Editor** > **New Query**.
 2. Copy and paste the contents of [`supabase_schema.sql`](file:///a:/AccountiX/supabase_schema.sql).
-3. Click **Run** to generate all 15 agency tables, relations, and RLS security policies.
+3. Click **Run** to generate all persistent tables and RLS security policies.
 
-### Step 3: Connect AccountiX
-1. Open `.env` and set:
-   ```env
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   ```
-2. Or in the web interface, navigate to **`⚙️ Settings`** > **Supabase Cloud Database & PostgreSQL Sync** to save your keys.
-3. Click **`⬆️ Push All Local Data to Supabase`** to migrate records to the cloud!
+### Step 3: Add to Vercel (Automatic for All Users Worldwide)
+1. Open your **Vercel Dashboard** > **Project Settings** > **Environment Variables**.
+2. Add these 2 variables:
+   - `SUPABASE_URL` = `https://xyzcompany.supabase.co`
+   - `SUPABASE_ANON_KEY` = `your_anon_key_here`
+3. Click **Save** and **Redeploy**.
+4. **THAT'S IT!** Now every single user, phone, and laptop that opens AccountiX automatically connects to your shared database with **zero configuration required!**
 
 ### 2. Switching Themes
 - Click the **`☀️ / 🌙`** toggle button on the top navigation bar or go to **Settings**.
