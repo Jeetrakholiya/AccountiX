@@ -6,7 +6,7 @@
 <meta name="description" content="AccountiX — Executive Agency Operating System & Financial ERP">
 <meta name="theme-color" content="#080a10">
 <title>AccountiX — Executive Agency Operating System & Financial ERP</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236366f1'/><text x='50%' y='62%' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='44' fill='%23ffffff'>AX</text></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='0' y1='0' x2='48' y2='48' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23818cf8'/%3E%3Cstop offset='100%25' stop-color='%234f46e5'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='48' y1='0' x2='0' y2='48' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%2338bdf8'/%3E%3Cstop offset='100%25' stop-color='%2310b981'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='48' height='48' rx='12' fill='%230f172a'/%3E%3Crect x='1' y='1' width='46' height='46' rx='11' stroke='%236366f1' stroke-width='1.5' stroke-opacity='0.4'/%3E%3Cpath d='M12 36L22.4 12.8C23.1 11.3 24.9 11.3 25.6 12.8L36 36C36.6 37.3 35.5 38.5 34.2 38.5H30.4C29.3 38.5 28.3 37.8 27.9 36.8L25.8 31H18.2L16.1 36.8C15.7 37.8 14.7 38.5 13.6 38.5H9.8C8.5 38.5 7.4 37.3 8 36Z' fill='url(%23g1)'/%3E%3Cpath d='M34 14C35.2 12.8 37.1 13 37.9 14.4L24.8 36.6C24 37.9 22.1 38.1 20.9 36.9L13.8 29.8C12.7 28.7 12.9 26.9 14.2 26.1L31.2 15.3C32.1 14.7 33.1 14.3 34 14Z' fill='url(%23g2)' opacity='0.92'/%3E%3Cpath d='M22 24.5L25 21.5L28 24.5L25 27.5Z' fill='%23ffffff'/%3E%3Ccircle cx='25' cy='24.5' r='1.8' fill='%2338bdf8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
@@ -169,12 +169,12 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
   display: flex; align-items: center; gap: 12px;
 }
 .brand-icon {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: var(--brand-gradient); display: flex; align-items: center; justify-content: center;
-  color: #fff; font-weight: 800; font-size: 19px; box-shadow: 0 4px 14px var(--brand-glow);
-  font-family: 'Space Grotesk'; letter-spacing: -0.05em; flex-shrink: 0;
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
-.brand-title { font-size: 18px; font-weight: 800; letter-spacing: 0.2px; color: var(--text-primary); }
+.brand-icon svg { width: 100%; height: 100%; display: block; }
+.brand-title { font-size: 17.5px; font-weight: 800; letter-spacing: 0.2px; color: var(--text-primary); font-family: 'Space Grotesk', sans-serif; }
 .brand-tagline { font-size: 10.5px; color: var(--signal-cash); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 1px; }
 
 .nav-section { display: flex; flex-direction: column; gap: 3px; flex: 1; }
@@ -1413,6 +1413,55 @@ let STATE = {
   _adminTab: 'overview', _empTab: 'workspace', _empContentTab: 'all'
 };
 
+/* ================= 💎 BESPOKE ACCOUNTIX BRAND LOGO ENGINE ================= */
+function renderAccountixLogoSvg(size = 38, variant = 'brand') {
+  const gId1 = `axG1_${Math.random().toString(36).substr(2, 5)}`;
+  const gId2 = `axG2_${Math.random().toString(36).substr(2, 5)}`;
+  
+  let col1Start = '#818cf8', col1End = '#4f46e5';
+  let col2Start = '#38bdf8', col2End = '#10b981';
+  let badgeBorder = 'rgba(99,102,241,0.35)';
+
+  if (variant === 'admin') {
+    col1Start = '#c084fc'; col1End = '#7c3aed';
+    col2Start = '#f472b6'; col2End = '#db2777';
+    badgeBorder = 'rgba(168,85,247,0.4)';
+  } else if (variant === 'employee') {
+    col1Start = '#34d399'; col1End = '#059669';
+    col2Start = '#38bdf8'; col2End = '#0284c7';
+    badgeBorder = 'rgba(16,185,129,0.4)';
+  }
+
+  return `
+    <svg width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:12px; flex-shrink:0; vertical-align:middle; display:inline-block;">
+      <defs>
+        <linearGradient id="${gId1}" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="${col1Start}"/>
+          <stop offset="100%" stop-color="${col1End}"/>
+        </linearGradient>
+        <linearGradient id="${gId2}" x1="48" y1="0" x2="0" y2="48" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="${col2Start}"/>
+          <stop offset="100%" stop-color="${col2End}"/>
+        </linearGradient>
+      </defs>
+      <!-- Base Shield Plate -->
+      <rect width="48" height="48" rx="12" fill="#0d1322"/>
+      <rect x="0.75" y="0.75" width="46.5" height="46.5" rx="11.25" stroke="${badgeBorder}" stroke-width="1.5"/>
+      
+      <!-- Primary 'A' Chevron Arch -->
+      <path d="M12 36L22.4 12.8C23.1 11.3 24.9 11.3 25.6 12.8L36 36C36.6 37.3 35.5 38.5 34.2 38.5H30.4C29.3 38.5 28.3 37.8 27.9 36.8L25.8 31H18.2L16.1 36.8C15.7 37.8 14.7 38.5 13.6 38.5H9.8C8.5 38.5 7.4 37.3 8 36Z" fill="url(#${gId1})"/>
+      
+      <!-- Intersecting Dynamic 'X' Beam -->
+      <path d="M34 14C35.2 12.8 37.1 13 37.9 14.4L24.8 36.6C24 37.9 22.1 38.1 20.9 36.9L13.8 29.8C12.7 28.7 12.9 26.9 14.2 26.1L31.2 15.3C32.1 14.7 33.1 14.3 34 14Z" fill="url(#${gId2})" opacity="0.92" style="mix-blend-mode:screen;"/>
+      
+      <!-- Center Precision Prism Core -->
+      <path d="M22 24.5L25 21.5L28 24.5L25 27.5Z" fill="#ffffff"/>
+      <circle cx="25" cy="24.5" r="1.8" fill="${col2Start}"/>
+    </svg>
+  `;
+}
+window.renderAccountixLogoSvg = renderAccountixLogoSvg;
+
 /* ================= SUPABASE CLOUD DATABASE & PERSISTENT STORAGE ENGINE ================= */
 const SUPABASE_URL_KEY = 'accountix_supabase_url';
 const SUPABASE_ANON_KEY = 'accountix_supabase_anon_key';
@@ -1430,8 +1479,13 @@ function showSessionLoading(msg = 'Restoring secure session & user data from Sup
     document.body.appendChild(el);
   }
   el.innerHTML = `
-    <div style="width:48px; height:48px; border:4px solid rgba(99,102,241,0.2); border-top-color:#6366f1; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
-    <div style="color:#f8fafc; font-size:16px; font-weight:800; font-family:Space Grotesk, sans-serif; letter-spacing:-0.3px;">AccountiX</div>
+    <div style="margin-bottom:6px; filter:drop-shadow(0 8px 24px rgba(99,102,241,0.5));">
+      ${renderAccountixLogoSvg(54, 'brand')}
+    </div>
+    <div style="color:#f8fafc; font-size:18px; font-weight:800; font-family:Space Grotesk, sans-serif; letter-spacing:-0.3px; display:flex; align-items:center; gap:2px;">
+      Accounti<span style="background:linear-gradient(135deg, #818cf8 0%, #38bdf8 50%, #34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">X</span>
+    </div>
+    <div style="width:26px; height:26px; border:3px solid rgba(99,102,241,0.2); border-top-color:#6366f1; border-radius:50%; animation:spin 0.8s linear infinite; margin-top:2px;"></div>
     <div style="color:#94a3b8; font-size:13px; font-weight:500;" id="sessionLoadingText">${esc(msg)}</div>
   `;
 }
@@ -3002,10 +3056,14 @@ function render() {
   appEl.innerHTML = `
     <div class="sidebar" id="sidebar">
       <div class="brand-badge">
-        <div class="brand-icon">${currentPanel === 'admin' ? '👑' : currentPanel === 'employee' ? '👥' : 'AX'}</div>
+        <div class="brand-icon">
+          ${renderAccountixLogoSvg(38, currentPanel)}
+        </div>
         <div>
-          <div class="brand-title">${esc(currentPanel === 'admin' ? 'AccountiX Platform' : settings.agencyName || 'AccountiX')}</div>
-          <div class="brand-tagline">${esc(currentPanel === 'admin' ? 'SaaS Management Hub' : currentPanel === 'employee' ? 'Employee Workspace' : settings.tagline || 'Business OS')}</div>
+          <div class="brand-title">
+            ${currentPanel === 'admin' ? 'Accounti<span style="color:#c084fc;">X</span> <span style="font-size:11px; font-weight:700; color:#c084fc; background:rgba(168,85,247,0.15); padding:2px 6px; border-radius:4px; margin-left:4px; vertical-align:middle;">HQ</span>' : currentPanel === 'employee' ? `${esc(settings.agencyName || 'AccountiX')} <span style="font-size:10px; color:#34d399; font-weight:700; background:rgba(16,185,129,0.15); padding:2px 5px; border-radius:4px; margin-left:3px; vertical-align:middle;">TEAM</span>` : `Accounti<span style="background:linear-gradient(135deg, #818cf8 0%, #38bdf8 50%, #34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">X</span>`}
+          </div>
+          <div class="brand-tagline">${esc(currentPanel === 'admin' ? 'SaaS Management Hub' : currentPanel === 'employee' ? 'Employee Workspace' : settings.tagline || 'Business Operating System')}</div>
         </div>
       </div>
 
@@ -3366,9 +3424,13 @@ function renderLandingGateway() {
       
       <!-- Top Brand Header -->
       <div style="width:100%; max-width:460px; display:flex; flex-direction:column; align-items:center; margin-bottom:24px; text-align:center;">
-        <div style="width:52px; height:52px; background:linear-gradient(135deg, #6366f1, #4f46e5); border-radius:14px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:24px; color:#fff; box-shadow:0 8px 24px rgba(99,102,241,0.45); margin-bottom:14px;">AX</div>
-        <div style="font-size:26px; font-weight:800; font-family:'Space Grotesk', sans-serif; letter-spacing:-0.5px; color:#ffffff;">AccountiX</div>
-        <div style="font-size:13px; color:#94a3b8; font-weight:500; margin-top:3px;">Executive Agency Operating System & Financial ERP</div>
+        <div style="width:68px; height:68px; margin-bottom:14px; filter:drop-shadow(0 10px 24px rgba(99,102,241,0.45));">
+          ${renderAccountixLogoSvg(68, 'brand')}
+        </div>
+        <div style="font-size:28px; font-weight:800; font-family:'Space Grotesk', sans-serif; letter-spacing:-0.5px; color:#ffffff; display:flex; align-items:center; gap:2px;">
+          Accounti<span style="background:linear-gradient(135deg, #818cf8 0%, #38bdf8 50%, #34d399 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">X</span>
+        </div>
+        <div style="font-size:13px; color:#94a3b8; font-weight:500; margin-top:4px;">Executive Multi-Profession Operating System & Financial Engine</div>
       </div>
 
       <!-- Unified Auth Card -->
