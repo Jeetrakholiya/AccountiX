@@ -192,10 +192,10 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
 .nav-item.active .nav-counter { background: rgba(255, 255, 255, 0.25); color: #ffffff; border-color: transparent; }
 
 .sidebar-footer { padding-top: 14px; border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 10px; }
-.owner-pill { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 9px; }
-.owner-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; }
-.owner-info { font-size: 12px; line-height: 1.2; }
-.owner-info b { color: var(--text-primary); }
+.owner-pill { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--bg-subtle); border: 1px solid var(--border-subtle); border-radius: 9px; overflow: hidden; }
+.owner-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; overflow: hidden; flex-shrink: 0; }
+.owner-info { font-size: 12px; line-height: 1.2; min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owner-info b { color: var(--text-primary); display: block; overflow: hidden; text-overflow: ellipsis; }
 .owner-info span { color: var(--text-muted); font-size: 10.5px; }
 
 /* Topbar */
@@ -325,8 +325,16 @@ main { flex: 1; padding: 26px 36px 80px 36px; max-width: 1400px; width: 100%; ma
   gap: 10px;
 }
 .dropdown-header-avatar {
-  font-size: 26px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   line-height: 1;
+  flex-shrink: 0;
 }
 .dropdown-header-name {
   font-weight: 800;
@@ -944,6 +952,15 @@ const sanitizePhone = (p) => {
 };
 const esc = (s) => (s === undefined || s === null) ? '' : String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+function renderAvatar(avatar, size = 26, fallback = '👤') {
+  if (!avatar) return `<span style="font-size:${Math.round(size * 0.75)}px; line-height:1;">${fallback}</span>`;
+  if (typeof avatar === 'string' && (avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('data:'))) {
+    return `<img src="${avatar}" alt="Avatar" style="width:${size}px; height:${size}px; border-radius:50%; object-fit:cover; display:inline-block; vertical-align:middle; border:1px solid rgba(255,255,255,0.15);" onerror="this.outerHTML='<span style=\\'font-size:${Math.round(size * 0.75)}px;\\'>${fallback}</span>'" />`;
+  }
+  return `<span style="font-size:${Math.round(size * 0.75)}px; line-height:1;">${avatar}</span>`;
+}
+window.renderAvatar = renderAvatar;
+
 /* ================= WHATSAPP ENGINE ================= */
 function buildWaLink(phone, message) {
   return `https://wa.me/${sanitizePhone(phone)}?text=${encodeURIComponent(message)}`;
@@ -1510,6 +1527,7 @@ const AccountiX_API = {
   applyWorkspaceData(ws) {
     if (!ws) return;
     if (ws.clients && ws.clients.length) STATE.clients = ws.clients;
+    else if (!STATE.clients || !STATE.clients.length) seedData();
     if (ws.packages && ws.packages.length) STATE.packages = ws.packages;
     if (ws.payments && ws.payments.length) STATE.payments = ws.payments;
     if (ws.expenses && ws.expenses.length) STATE.expenses = ws.expenses;
@@ -1521,6 +1539,7 @@ const AccountiX_API = {
     if (ws.leads) STATE.leads = ws.leads;
     if (ws.serviceCatalog && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
     if (ws.settings && Object.keys(ws.settings).length) STATE.settings = { ...STATE.settings, ...ws.settings };
+    saveLocalState();
   }
 };
 window.AccountiX_API = AccountiX_API;
@@ -1570,6 +1589,9 @@ async function loadState() {
     }
     if (raw) {
       Object.assign(STATE, JSON.parse(raw));
+      if (!STATE.clients || !STATE.clients.length) {
+        seedData();
+      }
       if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
         STATE.serviceCatalog = [...DEFAULT_SERVICE_CATALOG];
       }
@@ -1891,7 +1913,7 @@ function render() {
 
       <div class="sidebar-footer">
         <div class="owner-pill" onclick="logoutGateway()" style="cursor:pointer;" title="Click to Sign Out & Return to Identity Gateway">
-          <div class="owner-avatar">${user.avatar || '👤'}</div>
+          <div class="owner-avatar">${renderAvatar(user.avatar, 28, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
           <div class="owner-info">
             <div><b>${esc(user.name)}</b></div>
             <span style="font-size:11px; color:var(--accent-rose); font-weight:700;">🚪 Sign Out / Switch</span>
@@ -1953,7 +1975,7 @@ function render() {
           <!-- 👤 Profile & Actions Dropdown Menu -->
           <div class="profile-dropdown-wrapper" id="profileDropdownWrapper">
             <button class="profile-trigger" id="topbarProfileTrigger" title="Account Menu, Settings, Rate Card & Sign Out">
-              <span style="font-size:16px; line-height:1;">${user.avatar || '👤'}</span>
+              <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;">${renderAvatar(user.avatar, 22, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</span>
               <span style="font-size:12px; font-weight:700; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.name.split(' ')[0])}</span>
               <span class="pill ${user.role === 'admin' ? 'pill-purple' : user.role === 'manager' ? 'pill-blue' : 'pill-green'}" style="font-size:9px; padding:1px 5px;">${user.role}</span>
               <span class="profile-caret">▼</span>
@@ -1964,10 +1986,10 @@ function render() {
               <!-- User Info Card -->
               <div class="dropdown-header">
                 <div class="dropdown-header-user">
-                  <div class="dropdown-header-avatar">${user.avatar || '👤'}</div>
-                  <div style="min-width:0; flex:1;">
-                    <div class="dropdown-header-name">${esc(user.name)}</div>
-                    <div class="dropdown-header-email mono">${esc(user.email)}</div>
+                  <div class="dropdown-header-avatar">${renderAvatar(user.avatar, 36, user.role === 'admin' ? '👑' : user.role === 'manager' ? '🏢' : '👤')}</div>
+                  <div style="min-width:0; flex:1; overflow:hidden;">
+                    <div class="dropdown-header-name" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.name)}</div>
+                    <div class="dropdown-header-email mono" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(user.email)}</div>
                   </div>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-top:6px; padding-top:6px; border-top:1px solid var(--border-subtle);">
@@ -2769,7 +2791,7 @@ function openAuthModal() {
     <!-- Active Profile Card -->
     <div style="padding:16px 18px; background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; margin-bottom:20px;">
       <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
-        <div style="font-size:38px;">${curr.avatar || '👤'}</div>
+        <div style="width:48px; height:48px; border-radius:50%; overflow:hidden; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">${renderAvatar(curr.avatar, 48, curr.role === 'admin' ? '👑' : curr.role === 'manager' ? '🏢' : '👤')}</div>
         <div>
           <div style="font-weight:800; font-size:16px; color:var(--text-primary);">${esc(curr.name)}</div>
           <div style="font-size:12.5px; color:var(--text-secondary);"><span class="mono">${esc(curr.email)}</span></div>
