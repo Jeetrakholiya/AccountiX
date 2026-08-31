@@ -2246,6 +2246,44 @@ async function loadState() {
     console.warn('Load state notice:', e);
   }
 
+  // 1. Fetch global Supabase configuration from server (Cross-Device Cloud Sync)
+  try {
+    const sbConfigRes = await fetch('/api/config/supabase').then(r => r.json());
+    if (sbConfigRes && sbConfigRes.connected && sbConfigRes.url && sbConfigRes.anonKey) {
+      const currentCreds = getSupabaseCreds();
+      if (!currentCreds.url || currentCreds.url !== sbConfigRes.url) {
+        setSupabaseCreds(sbConfigRes.url, sbConfigRes.anonKey);
+      }
+    }
+  } catch (e) {
+    console.warn('Supabase config fetch note:', e);
+  }
+
+  // 2. Fetch server database state for cross-device accounts
+  try {
+    const stateRes = await fetch('/api/state').then(r => r.json());
+    if (stateRes) {
+      if (Array.isArray(stateRes.allUsers) && stateRes.allUsers.length) {
+        if (!STATE.allUsers) STATE.allUsers = [];
+        stateRes.allUsers.forEach(bu => {
+          const exIdx = STATE.allUsers.findIndex(u => u.email && u.email.toLowerCase().trim() === bu.email.toLowerCase().trim());
+          if (exIdx >= 0) STATE.allUsers[exIdx] = { ...STATE.allUsers[exIdx], ...bu };
+          else STATE.allUsers.push(bu);
+        });
+      }
+      if (Array.isArray(stateRes.companies) && stateRes.companies.length) {
+        if (!STATE.companies) STATE.companies = [];
+        stateRes.companies.forEach(bc => {
+          const exIdx = STATE.companies.findIndex(c => c.id === bc.id);
+          if (exIdx >= 0) STATE.companies[exIdx] = { ...STATE.companies[exIdx], ...bc };
+          else STATE.companies.push(bc);
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('State sync note:', e);
+  }
+
   // Ensure robust data structure without forcing fake sample data
   if (!Array.isArray(STATE.clients)) STATE.clients = [];
   if (!Array.isArray(STATE.packages)) STATE.packages = [];
@@ -3412,6 +3450,13 @@ function renderLandingGateway() {
           ` : `
             Don't have an account? <a href="javascript:void(0)" onclick="setAuthMode('register')" style="color:#818cf8; font-weight:700; text-decoration:none;">Register New Agency</a>
           `}
+        </div>
+
+        <!-- Cross-Device Cloud Sync Link -->
+        <div style="text-align:center; margin-top:16px; padding-top:14px; border-top:1px solid #1e293b;">
+          <a href="javascript:void(0)" onclick="openSupabaseCloudModal()" style="font-size:12px; color:#10b981; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:6px; cursor:pointer;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+            <span>☁️</span> Connect Supabase Cloud (Multi-Device Sync)
+          </a>
         </div>
 
       </div>
@@ -9101,10 +9146,21 @@ function attachSettings() {
         return;
       }
       setSupabaseCreds(url, key);
-      toast('Connecting to Supabase...');
+      toast('Connecting to Supabase Cloud...');
+
+      // Broadcast to backend server for multi-device sync
+      try {
+        await fetch('/api/config/supabase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, anonKey: key })
+        });
+      } catch(e) {}
+
       const test = await testSupabaseConnection();
       if (test.success) {
         toast('🟢 Supabase Connected Successfully! Syncing...');
+        await pushToSupabaseBulk();
         await syncFromSupabase();
         render();
       } else {
@@ -9118,10 +9174,10 @@ function attachSettings() {
   const pushBtn = document.getElementById('pushSbBtn');
   if (pushBtn) {
     pushBtn.onclick = async () => {
-      toast('Pushing all local data to Supabase...');
+      toast('Pushing all local data to Supabase Cloud...');
       const res = await pushToSupabaseBulk();
       if (res.success) {
-        toast('✅ All data pushed to Supabase Cloud!');
+        toast('✅ All data pushed to Supabase Cloud! Available on all devices.');
       } else {
         alert('Failed to push to Supabase: ' + res.error);
       }
@@ -9227,6 +9283,86 @@ function attachSettings() {
     }
   };
 }
+
+/* ================= ☁️ MULTI-DEVICE SUPABASE CLOUD MODAL ================= */
+function openSupabaseCloudModal() {
+  const sbCreds = getSupabaseCreds();
+  const sbConnected = isSupabaseConnected();
+
+  showModal(`
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M11.9 1.1L2.2 13.9c-.4.5 0 1.2.6 1.2h8.3l-1 7.8c-.1.8.9 1.2 1.4.6l9.7-12.8c.4-.5 0-1.2-.6-1.2h-8.3l1-7.8c.1-.8-.9-1.2-1.4-.7z" fill="#10b981"/></svg>
+        <div>
+          <h3 class="modal-title">☁️ Supabase Cloud (Multi-Device Sync)</h3>
+          <div style="font-size:12px; color:var(--text-muted);">Sync accounts, clients, contracts & payroll across phones, laptops & all devices</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:12px 16px; margin-bottom:18px;">
+      <div style="font-weight:700; font-size:13px; color:#10b981; margin-bottom:4px;">
+        ${sbConnected ? '🟢 Supabase Cloud Database Connected & Active' : '💡 Enable Real-Time Cloud Sync Across All Devices'}
+      </div>
+      <div style="font-size:12px; color:var(--text-secondary); line-height:1.5;">
+        Connect your Supabase PostgreSQL project. Any agency created or user registered will immediately sync in real-time to your mobile phone, other laptops, and team members!
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:12px;">
+      <label>Supabase Project URL *</label>
+      <input id="f_modal_sb_url" value="${esc(sbCreds.url)}" placeholder="https://your-project.supabase.co" required />
+    </div>
+
+    <div class="field" style="margin-bottom:16px;">
+      <label>Supabase Anon Public API Key *</label>
+      <input type="password" id="f_modal_sb_key" value="${esc(sbCreds.key)}" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required />
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="openSqlSchemaModal()">📋 View SQL Schema</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" id="btnSaveModalSb">⚡ Connect & Sync Globally ➔</button>
+      </div>
+    </div>
+  `, 560);
+
+  document.getElementById('btnSaveModalSb').onclick = async () => {
+    const url = document.getElementById('f_modal_sb_url').value.trim();
+    const key = document.getElementById('f_modal_sb_key').value.trim();
+    if (!url || !key) {
+      toast('Please enter Supabase URL and Anon Key');
+      return;
+    }
+    const btn = document.getElementById('btnSaveModalSb');
+    btn.innerHTML = 'Connecting... ⏳';
+
+    setSupabaseCreds(url, key);
+
+    // Save to backend server for global sync across all devices
+    try {
+      await fetch('/api/config/supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, anonKey: key })
+      });
+    } catch(e) {}
+
+    const test = await testSupabaseConnection();
+    if (test.success) {
+      toast('🟢 Supabase Cloud Connected! Broadcasting to all devices...');
+      await pushToSupabaseBulk();
+      closeModal();
+      render();
+    } else {
+      btn.innerHTML = '⚡ Connect & Sync Globally ➔';
+      alert('Connection Notice:\n\n' + test.error + '\n\nMake sure to run the SQL schema in your Supabase SQL Editor.');
+    }
+  };
+}
+window.openSupabaseCloudModal = openSupabaseCloudModal;
 
 function openSqlSchemaModal() {
   const sql = `-- ==============================================================================

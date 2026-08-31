@@ -32,10 +32,26 @@ try {
   // Safe fallback in constrained serverless environments
 }
 
-// Supabase client initialization
+// Supabase client initialization & multi-device dynamic resolver
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 let supabase = null;
+
+function getActiveSupabaseClient() {
+  if (supabase) return supabase;
+  const db = readDb();
+  const savedUrl = (db.supabaseConfig && db.supabaseConfig.url) || supabaseUrl;
+  const savedKey = (db.supabaseConfig && db.supabaseConfig.anonKey) || supabaseAnonKey;
+  if (savedUrl && savedKey && savedUrl.startsWith('http')) {
+    try {
+      supabase = createClient(savedUrl, savedKey);
+      return supabase;
+    } catch (err) {
+      console.warn('⚠️ Supabase dynamic connection warning:', err.message);
+    }
+  }
+  return null;
+}
 
 if (supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith('http')) {
   try {
@@ -312,6 +328,62 @@ app.post('/api/auth/google/config', (req, res) => {
   res.json({ success: true, clientId: clientId.trim() });
 });
 
+// Supabase Cloud Configuration & Cross-Device Sync Endpoints
+app.get('/api/config/supabase', (req, res) => {
+  const db = readDb();
+  const saved = db.supabaseConfig || {};
+  const activeUrl = saved.url || process.env.SUPABASE_URL || '';
+  const activeAnonKey = saved.anonKey || process.env.SUPABASE_ANON_KEY || '';
+  const activeServiceRoleKey = saved.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const isConnected = Boolean(getActiveSupabaseClient());
+
+  res.json({
+    success: true,
+    connected: isConnected,
+    url: activeUrl,
+    anonKey: activeAnonKey,
+    serviceRoleKey: activeServiceRoleKey,
+    hasAnonKey: Boolean(activeAnonKey)
+  });
+});
+
+app.post('/api/config/supabase', async (req, res) => {
+  try {
+    const { url, anonKey, serviceRoleKey } = req.body || {};
+    if (!url || !anonKey) {
+      return res.status(400).json({ success: false, error: 'Supabase Project URL and Anon Key are required' });
+    }
+
+    const cleanUrl = url.trim();
+    const cleanKey = anonKey.trim();
+    const cleanServiceKey = (serviceRoleKey || '').trim();
+
+    const testClient = createClient(cleanUrl, cleanKey);
+    const { error } = await testClient.from('user_data').select('id').limit(1);
+
+    supabase = testClient;
+
+    const db = readDb();
+    db.supabaseConfig = {
+      url: cleanUrl,
+      anonKey: cleanKey,
+      serviceRoleKey: cleanServiceKey,
+      updatedAt: new Date().toISOString()
+    };
+    writeDb(db);
+
+    console.log('☁️ Supabase Cloud database globally connected for all devices:', cleanUrl);
+    res.json({
+      success: true,
+      connected: true,
+      url: cleanUrl,
+      message: 'Supabase Cloud Database connected and synchronized globally across all devices!'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Google Cloud Console OAuth 2.0 Verification & Login
 app.post('/api/auth/google', async (req, res) => {
   try {
@@ -501,6 +573,27 @@ app.post('/api/auth/login', async (req, res) => {
     }
   } else {
     user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
+    
+    // Fallback: Check Supabase Cloud Database for cross-device authentication
+    if (!user) {
+      const sb = getActiveSupabaseClient();
+      if (sb) {
+        try {
+          const { data: sbData } = await sb.from('user_data').select('*').eq('title', `user_account_${cleanEmail}`).limit(1);
+          if (sbData && sbData.length > 0 && sbData[0].content) {
+            const parsed = JSON.parse(sbData[0].content);
+            if (parsed && parsed.email) {
+              user = parsed;
+              if (!db.allUsers) db.allUsers = [];
+              db.allUsers.push(user);
+            }
+          }
+        } catch (sbErr) {
+          console.warn('Supabase cloud login search error:', sbErr.message);
+        }
+      }
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -573,8 +666,9 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Password must be at least 4 characters' });
   }
 
+  const cleanEmail = email.toLowerCase().trim();
   const db = readDb();
-  let existing = db.allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase().trim());
+  let existing = db.allUsers.find(u => u.email && u.email.toLowerCase() === cleanEmail);
   const compId = `comp_${Date.now()}`;
   const compName = role === 'admin' ? 'AccountiX Platform HQ' : `${name}'s Agency`;
 
@@ -586,7 +680,7 @@ app.post('/api/auth/register', async (req, res) => {
     existing = {
       id: `usr_${Date.now()}`,
       name: name,
-      email: email.trim(),
+      email: cleanEmail,
       password: password,
       role: role || 'manager',
       companyId: compId,
@@ -600,7 +694,22 @@ app.post('/api/auth/register', async (req, res) => {
     };
     db.allUsers.push(existing);
     if (!db.companies.find(c => c.id === compId)) {
-      db.companies.push({ id: compId, name: compName, plan: '1 Year Plan', status: 'Active', ownerEmail: email.trim(), createdAt: new Date().toISOString().split('T')[0], usersCount: 1, mrr: 999 });
+      db.companies.push({ id: compId, name: compName, plan: '1 Year Plan', status: 'Active', ownerEmail: cleanEmail, createdAt: new Date().toISOString().split('T')[0], usersCount: 1, mrr: 999 });
+    }
+  }
+
+  // Cross-Device Sync: Push to Supabase Cloud
+  const sb = getActiveSupabaseClient();
+  if (sb) {
+    try {
+      await sb.from('user_data').upsert({
+        id: existing.id,
+        title: `user_account_${cleanEmail}`,
+        content: JSON.stringify(existing),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    } catch (sbErr) {
+      console.warn('Supabase cloud register sync note:', sbErr.message);
     }
   }
 
@@ -764,6 +873,31 @@ app.post('/api/workspace/sync', async (req, res) => {
   }
   if (incoming.allUsers && incoming.allUsers.length) {
     db.allUsers = incoming.allUsers;
+  }
+
+  // Multi-Device Cloud Sync to Supabase
+  const sb = getActiveSupabaseClient();
+  if (sb) {
+    try {
+      if (emailKey) {
+        await sb.from('user_data').upsert({
+          id: `ws_${emailKey}`,
+          title: `workspace_${emailKey}`,
+          content: JSON.stringify(workspacePayload),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      }
+      if (incoming.allUsers && incoming.allUsers.length) {
+        await sb.from('user_data').upsert({
+          id: 'global_all_users',
+          title: 'global_all_users',
+          content: JSON.stringify(incoming.allUsers),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      }
+    } catch (e) {
+      console.warn('Supabase workspace cloud sync note:', e.message);
+    }
   }
 
   writeDb(db);
