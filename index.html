@@ -2777,14 +2777,16 @@ function toggleTheme() {
 }
 
 /* ================= GOOGLE CLOUD CONSOLE (OAUTH 2.0) AUTHENTICATION ================= */
+const DEFAULT_GOOGLE_CLIENT_ID = '887215874415-2d33tga5m22tmguklgasu6nsn4pq1jv0.apps.googleusercontent.com';
 let _googleTokenClient = null;
 
 function initGoogleGIS(clientId) {
-  if (!clientId || !window.google || !window.google.accounts) return;
+  const activeClientId = clientId || DEFAULT_GOOGLE_CLIENT_ID;
+  if (!activeClientId || !window.google || !window.google.accounts) return;
   try {
     if (window.google.accounts.oauth2) {
       _googleTokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
+        client_id: activeClientId,
         scope: 'email profile openid',
         callback: async (tokenResponse) => {
           if (tokenResponse && tokenResponse.access_token) {
@@ -2816,7 +2818,7 @@ function initGoogleGIS(clientId) {
 
     if (window.google.accounts.id) {
       window.google.accounts.id.initialize({
-        client_id: clientId,
+        client_id: activeClientId,
         callback: async (response) => {
           if (response && response.credential) {
             toast('Verifying Google Token... ⏳');
@@ -2835,18 +2837,20 @@ function initGoogleGIS(clientId) {
   }
 }
 
-async function signInWithGoogle(targetRole = 'manager') {
-  let clientId = (STATE.settings && STATE.settings.googleClientId) || localStorage.getItem('accountix_google_client_id') || '';
-  
-  if (!clientId && window.AccountiX_API) {
-    try {
-      const cfg = await fetch('/api/auth/google/config').then(r => r.json());
-      if (cfg && cfg.clientId) clientId = cfg.clientId;
-    } catch(e) {}
-  }
+// Auto-initialize GIS on load
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    initGoogleGIS(DEFAULT_GOOGLE_CLIENT_ID);
+  });
+  // Also try immediately in case script is already ready
+  setTimeout(() => initGoogleGIS(DEFAULT_GOOGLE_CLIENT_ID), 500);
+}
 
+async function signInWithGoogle(targetRole = 'manager') {
+  let clientId = (STATE.settings && STATE.settings.googleClientId) || localStorage.getItem('accountix_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID;
+  
   if (clientId) {
-    initGoogleGIS(clientId);
+    if (!_googleTokenClient) initGoogleGIS(clientId);
     if (_googleTokenClient) {
       _googleTokenClient.requestAccessToken({ prompt: 'select_account' });
       return;
@@ -2857,8 +2861,11 @@ async function signInWithGoogle(targetRole = 'manager') {
     }
   }
 
-  // If Client ID is not configured yet, prompt for Client ID once
-  openGoogleClientConnectModal(targetRole, clientId);
+  // Fallback
+  initGoogleGIS(DEFAULT_GOOGLE_CLIENT_ID);
+  if (_googleTokenClient) {
+    _googleTokenClient.requestAccessToken({ prompt: 'select_account' });
+  }
 }
 window.signInWithGoogle = signInWithGoogle;
 

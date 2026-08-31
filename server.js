@@ -252,10 +252,12 @@ app.get('/api/health', (req, res) => {
 });
 
 // Google Cloud Console OAuth 2.0 Configuration (Global Multi-Device Sync)
+const DEFAULT_GOOGLE_CLIENT_ID = '887215874415-2d33tga5m22tmguklgasu6nsn4pq1jv0.apps.googleusercontent.com';
+
 app.get('/api/auth/google/config', (req, res) => {
   const db = readDb();
   const dbClientId = (db.settings && db.settings.googleClientId) || (db.workspaces && db.workspaces.comp_1 && db.workspaces.comp_1.settings && db.workspaces.comp_1.settings.googleClientId) || '';
-  const clientId = process.env.GOOGLE_CLIENT_ID || dbClientId || '';
+  const clientId = process.env.GOOGLE_CLIENT_ID || dbClientId || DEFAULT_GOOGLE_CLIENT_ID;
   res.json({
     clientId: clientId,
     configured: Boolean(clientId)
