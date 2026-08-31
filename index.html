@@ -1200,6 +1200,84 @@ const LEAD_STAGES = [
   'Lost'
 ];
 
+const DEFAULT_SAAS_PLANS = [
+  {
+    id: 'plan_1m',
+    name: '1 Month Plan',
+    badge: '1 Month Plan',
+    badgeColor: 'pill-blue',
+    price: 119,
+    billingPeriod: '1 month',
+    description: 'Standard flexible monthly license for solo agency founders.',
+    features: [
+      'Unlimited Clients & Retainers',
+      'WhatsApp Notification Engine',
+      'Content Studio & Kanban Tasks',
+      'Local & Cloud Sync Mode'
+    ],
+    isPopular: false,
+    isTrial: false
+  },
+  {
+    id: 'plan_6m',
+    name: '6 Months Plan',
+    badge: '6 Months Plan (Popular · Save 18%)',
+    badgeColor: 'pill-green',
+    price: 589,
+    billingPeriod: '6 months',
+    description: 'Half-yearly license with full team & production matrix.',
+    features: [
+      'Everything in 1 Month Plan',
+      'Supabase Real-Time Database',
+      '31-Day Attendance & Payroll Matrix',
+      'Automated Tax Invoices & Reports'
+    ],
+    isPopular: true,
+    isTrial: false
+  },
+  {
+    id: 'plan_1y',
+    name: '1 Year Plan',
+    badge: '1 Year Plan (Best Value · Save 30%)',
+    badgeColor: 'pill-purple',
+    price: 999,
+    billingPeriod: '1 year',
+    description: 'Full annual executive suite with unlimited specialist portals.',
+    features: [
+      'Unlimited Clients, Staff & Portals',
+      'Dedicated Employee Portals',
+      'Realized Cash Engine & Audit Hub',
+      'Priority 24/7 VIP Support'
+    ],
+    isPopular: false,
+    isTrial: false
+  },
+  {
+    id: 'plan_trial',
+    name: 'Starter Trial',
+    badge: 'Starter Trial',
+    badgeColor: 'pill-gray',
+    price: 0,
+    billingPeriod: '14 Days',
+    description: 'Available for new prospective agencies evaluating AccountiX Business OS before activating a paid tier.',
+    features: [
+      '14-Day Full Evaluation Period',
+      'Explore all features & modules',
+      'No credit card required'
+    ],
+    isPopular: false,
+    isTrial: true
+  }
+];
+
+function getSaasPlans() {
+  if (!STATE.saasPlans || !Array.isArray(STATE.saasPlans) || STATE.saasPlans.length === 0) {
+    STATE.saasPlans = JSON.parse(JSON.stringify(DEFAULT_SAAS_PLANS));
+  }
+  return STATE.saasPlans;
+}
+window.getSaasPlans = getSaasPlans;
+
 function getProfessionConfig(profKey) {
   const k = profKey || (STATE.settings && STATE.settings.profession) || 'general';
   if (k === 'custom') {
@@ -3611,72 +3689,53 @@ window.logoutGateway = logoutGateway;
 /* ---------- MANAGING DIRECTOR PLAN UPGRADE & SUBSCRIPTION MODAL ---------- */
 function openAgencyPlanModal() {
   const currPlan = (STATE.currentUser && STATE.currentUser.plan) || '1 Year Plan';
+  const plans = getSaasPlans();
+  const paidPlans = plans.filter(p => !p.isTrial);
+  const trialPlan = plans.find(p => p.isTrial) || { id: 'trial', name: 'Starter Trial', price: 0, billingPeriod: '14 Days' };
+
   showModal(`
     <div class="modal-header">
       <div>
         <h3 class="modal-title">💳 Upgrade / Purchase Agency Plan</h3>
-        <div style="font-size:12px; color:var(--text-muted);">Choose your business license: 1 Month, 6 Months, or 1 Year Annual Suite</div>
+        <div style="font-size:12px; color:var(--text-muted);">Choose your business license tier and unlock full system capability</div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
     <div class="grid grid-3" style="margin-bottom:20px; gap:16px;">
-      <!-- 1 Month Plan -->
-      <div class="card" style="border:1px solid ${currPlan === '1 Month Plan' ? 'var(--brand)' : 'var(--border-card)'};">
-        <div class="pill pill-blue" style="margin-bottom:8px;">Standard Monthly</div>
-        <div style="font-size:26px; font-weight:800; font-family:'JetBrains Mono'; margin-bottom:4px; color:var(--text-primary);">₹119 <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">/ 1 month</span></div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Monthly flexible access for solo agency founders.</div>
-        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
-          <li>Unlimited Clients & Retainers</li>
-          <li>WhatsApp Notification Engine</li>
-          <li>Task & Content Studio</li>
-          <li>Local & Cloud Sync Mode</li>
-        </ul>
-        <button class="btn ${currPlan === '1 Month Plan' ? 'btn-ghost' : 'btn-primary'} btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('1 Month Plan', 119)">
-          ${currPlan === '1 Month Plan' ? 'Active Plan' : 'Select 1 Month (₹119)'}
-        </button>
-      </div>
-
-      <!-- 6 Months Plan -->
-      <div class="card" style="border:1px solid ${currPlan === '6 Months Plan' ? 'var(--signal-cash)' : 'var(--brand)'}; box-shadow:0 0 16px rgba(59,130,246,0.2);">
-        <div class="pill pill-green" style="margin-bottom:8px;">Popular · Save 18%</div>
-        <div style="font-size:26px; font-weight:800; font-family:'JetBrains Mono'; color:var(--signal-cash); margin-bottom:4px;">₹589 <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">/ 6 months</span></div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Half-yearly license with full team workspace.</div>
-        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
-          <li>Everything in 1 Month Plan</li>
-          <li>Supabase Real-Time Database</li>
-          <li>31-Day Attendance & Payroll Matrix</li>
-          <li>Automated Tax Invoices & Reports</li>
-        </ul>
-        <button class="btn btn-signal btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('6 Months Plan', 589)">
-          ${currPlan === '6 Months Plan' ? 'Active Plan' : 'Select 6 Months (₹589)'}
-        </button>
-      </div>
-
-      <!-- 1 Year Plan -->
-      <div class="card" style="border:1px solid ${currPlan === '1 Year Plan' ? 'var(--signal-cash)' : 'var(--border-card)'}; box-shadow:0 0 20px var(--brand-glow);">
-        <div class="pill pill-purple" style="margin-bottom:8px;">Best Value · Save 30%</div>
-        <div style="font-size:26px; font-weight:800; font-family:'JetBrains Mono'; color:var(--brand); margin-bottom:4px;">₹999 <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">/ 1 year</span></div>
-        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">Full annual executive suite (only ₹83/mo).</div>
-        <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
-          <li>Unlimited Clients, Staff & Portals</li>
-          <li>Dedicated Employee Accounts</li>
-          <li>Realized Cash Engine & Audit Hub</li>
-          <li>Priority 24/7 VIP Support</li>
-        </ul>
-        <button class="btn btn-primary btn-sm" style="width:100%; justify-content:center;" onclick="selectAgencyPlan('1 Year Plan', 999)">
-          ${currPlan === '1 Year Plan' ? 'Active Plan' : 'Select 1 Year (₹999)'}
-        </button>
-      </div>
+      ${paidPlans.map(p => {
+        const isPop = p.isPopular;
+        const bColor = p.badgeColor || (isPop ? 'pill-green' : 'pill-blue');
+        const isActive = currPlan === p.name;
+        const priceColor = isPop ? 'var(--signal-cash)' : 'var(--brand)';
+        
+        return `
+          <div class="card" style="border:1px solid ${isActive ? 'var(--signal-cash)' : (isPop ? 'var(--brand)' : 'var(--border-card)')}; ${isPop ? 'box-shadow:0 0 16px rgba(59,130,246,0.2);' : ''} display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div class="pill ${bColor}" style="margin-bottom:8px;">${esc(p.badge || p.name)}</div>
+              <div style="font-size:26px; font-weight:800; font-family:'JetBrains Mono'; margin-bottom:4px; color:${priceColor};">
+                ${STATE.settings.currencySymbol || '₹'}${p.price.toLocaleString('en-IN')} <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">/ ${esc(p.billingPeriod)}</span>
+              </div>
+              <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px;">${esc(p.description || '')}</div>
+              <ul style="font-size:11.5px; color:var(--text-muted); line-height:1.8; padding-left:16px; margin-bottom:14px;">
+                ${(p.features || []).map(f => `<li>${esc(f)}</li>`).join('')}
+              </ul>
+            </div>
+            <button class="btn ${isActive ? 'btn-ghost' : (isPop ? 'btn-signal' : 'btn-primary')} btn-sm" style="width:100%; justify-content:center; margin-top:auto;" onclick="selectAgencyPlan('${esc(p.name)}', ${p.price})">
+              ${isActive ? 'Active Plan' : `Select ${esc(p.name)} (${STATE.settings.currencySymbol || '₹'}${p.price})`}
+            </button>
+          </div>
+        `;
+      }).join('')}
     </div>
 
     <!-- 14-Day Free Starter Trial Link -->
-    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
+    <div style="text-align:center; padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
       <div style="font-size:12px; color:var(--text-secondary);">
-        Need to test the platform first? <b style="color:var(--text-primary);">14-Day Free Trial</b> is available with local sandbox mode.
+        Need to test the platform first? <b style="color:var(--text-primary);">${esc(trialPlan.name)}</b> is available with sandbox mode.
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="selectAgencyPlan('Starter Trial', 0)">
-        Activate Free Trial (₹0)
+      <button class="btn btn-ghost btn-sm" onclick="selectAgencyPlan('${esc(trialPlan.name)}', ${trialPlan.price})">
+        Activate ${esc(trialPlan.name)} (${STATE.settings.currencySymbol || '₹'}${trialPlan.price})
       </button>
     </div>
   `, 760);
@@ -3702,6 +3761,7 @@ window.selectAgencyPlan = selectAgencyPlan;
 
 /* ---------- NEW AGENCY 14-DAY TRIAL SIGNUP MODAL ---------- */
 function openNewAgencySignupModal() {
+  const plans = getSaasPlans();
   showModal(`
     <div class="modal-header">
       <div>
@@ -3735,10 +3795,7 @@ function openNewAgencySignupModal() {
       <div class="field">
         <label>Starting Plan Tier</label>
         <select id="f_sg_plan">
-          <option value="1 Month Plan">1 Month Plan (₹119 / month)</option>
-          <option value="6 Months Plan" selected>6 Months Plan (₹589 / 6 months - Save 18%)</option>
-          <option value="1 Year Plan">1 Year Plan (₹999 / 1 year - Save 30%)</option>
-          <option value="Starter Trial">14-Day Free Trial (₹0)</option>
+          ${plans.map((p, idx) => `<option value="${esc(p.name)}" ${idx === 1 ? 'selected' : ''}>${esc(p.name)} (${p.price === 0 ? 'Free' : `₹${p.price}`} / ${esc(p.billingPeriod)})</option>`).join('')}
           <option value="__custom__">➕ Custom Plan Tier...</option>
         </select>
         <div id="f_sg_plan_custom_box" style="display:none; margin-top:6px;">
@@ -4263,9 +4320,7 @@ function openAddAgencyModal() {
       <div class="field">
         <label>Subscription Plan</label>
         <select id="f_comp_plan">
-          <option value="Pro Agency">Pro Agency (₹7,999/mo)</option>
-          <option value="Enterprise Suite">Enterprise Suite (₹14,999/mo)</option>
-          <option value="Starter Trial">Starter Trial (₹0/mo)</option>
+          ${getSaasPlans().map((p, idx) => `<option value="${esc(p.name)}" ${idx === 1 ? 'selected' : ''}>${esc(p.name)} (${p.price === 0 ? 'Free' : `₹${p.price}`} / ${esc(p.billingPeriod)})</option>`).join('')}
           <option value="__custom__">➕ Custom Plan...</option>
         </select>
         <div id="f_comp_plan_custom_box" style="display:none; margin-top:6px;">
@@ -4692,71 +4747,310 @@ window.clearLoginLogs = clearLoginLogs;
 
 /* ---------- SUPER ADMIN: PLANS & TIERS ---------- */
 function renderAdminPlansView() {
+  const plans = getSaasPlans();
+  const paidPlans = plans.filter(p => !p.isTrial);
+  const trialPlans = plans.filter(p => p.isTrial);
+
   return `
-    <div class="view-header" style="margin-bottom:24px;">
-      <h1 class="view-title">💳 SaaS Subscription Plans & Tiers</h1>
-      <p class="view-sub" style="color:var(--text-secondary);">Enterprise license tiers, usage quotas, and pricing configurations</p>
-    </div>
-
-    <div class="grid grid-3" style="gap:16px; margin-bottom:20px;">
-      <!-- 1 Month Plan -->
-      <div class="card" style="border-color:var(--border-card);">
-        <div class="pill pill-blue" style="margin-bottom:12px; display:inline-block;">1 Month Plan</div>
-        <div style="font-size:32px; font-weight:800; font-family:'JetBrains Mono'; margin-bottom:6px; color:var(--text-primary);">₹119 <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">/ 1 month</span></div>
-        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px;">Standard flexible monthly license for solo agency founders.</p>
-        <ul style="font-size:12.5px; line-height:2; color:var(--text-secondary); padding-left:18px; margin-bottom:16px;">
-          <li>Unlimited Clients & Retainers</li>
-          <li>WhatsApp Notification Engine</li>
-          <li>Content Studio & Kanban Tasks</li>
-          <li>Local & Cloud Sync Mode</li>
-        </ul>
-      </div>
-
-      <!-- 6 Months Plan -->
-      <div class="card" style="border-color:var(--brand); box-shadow:0 0 20px rgba(59,130,246,0.25);">
-        <div class="pill pill-green" style="margin-bottom:12px; display:inline-block;">6 Months Plan (Popular · Save 18%)</div>
-        <div style="font-size:32px; font-weight:800; font-family:'JetBrains Mono'; color:var(--signal-cash); margin-bottom:6px;">₹589 <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">/ 6 months</span></div>
-        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px;">Half-yearly license with full team & production matrix.</p>
-        <ul style="font-size:12.5px; line-height:2; color:var(--text-secondary); padding-left:18px; margin-bottom:16px;">
-          <li>Everything in 1 Month Plan</li>
-          <li>Supabase Real-Time Database</li>
-          <li>31-Day Attendance & Payroll Matrix</li>
-          <li>Automated Tax Invoices & Reports</li>
-        </ul>
-      </div>
-
-      <!-- 1 Year Plan -->
-      <div class="card" style="border-color:var(--signal-cash); box-shadow:0 0 24px var(--brand-glow);">
-        <div class="pill pill-purple" style="margin-bottom:12px; display:inline-block;">1 Year Plan (Best Value · Save 30%)</div>
-        <div style="font-size:32px; font-weight:800; font-family:'JetBrains Mono'; color:var(--brand); margin-bottom:6px;">₹999 <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">/ 1 year</span></div>
-        <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px;">Full annual executive suite with unlimited specialist portals.</p>
-        <ul style="font-size:12.5px; line-height:2; color:var(--text-secondary); padding-left:18px; margin-bottom:16px;">
-          <li>Unlimited Clients, Staff & Portals</li>
-          <li>Dedicated Employee Portals</li>
-          <li>Realized Cash Engine & Audit Hub</li>
-          <li>Priority 24/7 VIP Support</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Starter Trial Tier Callout -->
-    <div class="card" style="background:var(--bg-card); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+    <div class="view-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
       <div>
-        <div style="font-weight:700; font-size:14px; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
-          <span class="pill pill-gray">Starter Trial</span>
-          <span>14-Day Free Evaluation Period (₹0)</span>
-        </div>
-        <div style="font-size:12.5px; color:var(--text-secondary);">
-          Available for new prospective agencies evaluating AccountiX Business OS before activating a paid tier.
-        </div>
+        <h1 class="view-title">💳 SaaS Subscription Plans & Tiers</h1>
+        <p class="view-sub" style="color:var(--text-secondary);">Enterprise license tiers, usage quotas, and pricing configurations</p>
       </div>
-      <div style="font-size:20px; font-weight:800; font-family:'JetBrains Mono'; color:var(--text-muted);">
-        ₹0 / 14 Days
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="resetPlansBtn" style="font-size:12px;">🔄 Reset Defaults</button>
+        <button class="btn btn-primary" id="addNewPlanBtn"><span>+</span> Add New Plan Tier</button>
+      </div>
+    </div>
+
+    <!-- Active Paid Plans Grid -->
+    <div class="grid grid-3" style="gap:16px; margin-bottom:24px;">
+      ${paidPlans.map(p => {
+        const isPop = p.isPopular;
+        const bColor = p.badgeColor || (isPop ? 'pill-green' : 'pill-blue');
+        const priceColor = isPop ? 'var(--signal-cash)' : 'var(--brand)';
+        const borderStyle = isPop ? 'border-color:var(--brand); box-shadow:0 0 20px rgba(59,130,246,0.25);' : 'border-color:var(--border-card);';
+        
+        return `
+          <div class="card" style="${borderStyle} display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                <span class="pill ${bColor}" style="font-size:11px; font-weight:700;">${esc(p.badge || p.name)}</span>
+                <div style="display:flex; gap:4px;">
+                  <button class="btn btn-ghost btn-sm" style="padding:3px 8px; font-size:11px;" data-edit-plan="${p.id}" title="Edit Plan Details">✏️ Edit</button>
+                  <button class="btn btn-danger-ghost btn-sm" style="padding:3px 8px; font-size:11px;" data-del-plan="${p.id}" title="Delete Plan">🗑️</button>
+                </div>
+              </div>
+
+              <h3 style="font-size:18px; font-weight:800; color:var(--text-primary); margin:0 0 6px 0;">${esc(p.name)}</h3>
+
+              <div style="font-size:32px; font-weight:800; font-family:'JetBrains Mono'; margin-bottom:6px; color:${priceColor};">
+                ${p.price > 0 ? `${STATE.settings.currencySymbol || '₹'}${p.price.toLocaleString('en-IN')}` : 'Free'}
+                <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">/ ${esc(p.billingPeriod || 'month')}</span>
+              </div>
+
+              <p style="font-size:12.5px; color:var(--text-secondary); margin-bottom:16px; line-height:1.45;">${esc(p.description || '')}</p>
+
+              <ul style="font-size:12.5px; line-height:2; color:var(--text-secondary); padding-left:18px; margin-bottom:16px;">
+                ${(p.features || []).map(f => `<li>${esc(f)}</li>`).join('')}
+              </ul>
+            </div>
+
+            <div style="margin-top:auto; padding-top:12px; border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:11px; color:var(--text-muted);">Plan ID: <code class="mono" style="font-size:10px;">${p.id}</code></span>
+              <button class="btn btn-signal btn-sm" style="font-size:11px;" data-edit-plan="${p.id}">Edit Plan</button>
+            </div>
+          </div>
+        `;
+      }).join('') || `<div class="empty" style="grid-column:1/-1; padding:40px 0;">No active subscription plans defined. Click "Add New Plan Tier" to create one.</div>`}
+    </div>
+
+    <!-- Trial & Evaluation Tiers Section -->
+    <div style="margin-top:10px;">
+      <div style="font-size:13px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.5px; margin-bottom:12px;">
+        🧪 Evaluation & Free Trial Tiers (${trialPlans.length}):
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        ${trialPlans.map(tp => `
+          <div class="card" style="background:var(--bg-card); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:16px 20px;">
+            <div style="flex:1; min-width:240px;">
+              <div style="font-weight:700; font-size:14px; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+                <span class="pill ${tp.badgeColor || 'pill-gray'}">${esc(tp.badge || tp.name)}</span>
+                <span style="color:var(--text-primary); font-weight:800;">${esc(tp.name)}</span>
+                <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(${tp.price === 0 ? 'Free' : `${STATE.settings.currencySymbol || '₹'}${tp.price}`} · ${esc(tp.billingPeriod || '14 Days')})</span>
+              </div>
+              <div style="font-size:12.5px; color:var(--text-secondary); line-height:1.4;">
+                ${esc(tp.description || 'Evaluation tier for prospective agencies.')}
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div style="font-size:20px; font-weight:800; font-family:'JetBrains Mono'; color:var(--text-muted);">
+                ${tp.price === 0 ? '₹0' : `₹${tp.price}`} / ${esc(tp.billingPeriod || '14 Days')}
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-ghost btn-sm" data-edit-plan="${tp.id}">✏️ Edit</button>
+                <button class="btn btn-danger-ghost btn-sm" data-del-plan="${tp.id}">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `).join('') || `
+          <div class="card" style="padding:16px; text-align:center; color:var(--text-muted); font-size:12.5px;">
+            No trial tier configured. <a href="javascript:void(0)" onclick="openEditSaasPlanModal(null, true)" style="color:var(--brand); font-weight:700;">+ Create a Free Trial Tier</a>
+          </div>
+        `}
       </div>
     </div>
   `;
 }
-function attachAdminPlans() {}
+
+function attachAdminPlans() {
+  const addBtn = document.getElementById('addNewPlanBtn');
+  if (addBtn) addBtn.onclick = () => openEditSaasPlanModal();
+
+  const resetBtn = document.getElementById('resetPlansBtn');
+  if (resetBtn) resetBtn.onclick = () => resetSaasPlansToDefault();
+
+  document.querySelectorAll('[data-edit-plan]').forEach(el => {
+    el.onclick = () => openEditSaasPlanModal(el.dataset.editPlan);
+  });
+
+  document.querySelectorAll('[data-del-plan]').forEach(el => {
+    el.onclick = () => deleteSaasPlan(el.dataset.delPlan);
+  });
+}
+
+function openEditSaasPlanModal(planId = null, defaultTrial = false) {
+  const plans = getSaasPlans();
+  const plan = planId ? plans.find(p => p.id === planId) : null;
+  const isEditing = Boolean(plan);
+  const isTrial = isEditing ? Boolean(plan.isTrial) : defaultTrial;
+
+  const currentFeaturesText = (plan && plan.features) ? plan.features.join('\n') : (
+    isTrial ? '14-Day Full Evaluation Period\nExplore all features & modules\nNo credit card required' :
+    'Unlimited Clients & Retainers\nWhatsApp Notification Engine\nContent Studio & Kanban Tasks\nLocal & Cloud Sync Mode'
+  );
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">${isEditing ? `✏️ Edit Plan: ${esc(plan.name)}` : '➕ Create New Subscription Plan Tier'}</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Configure pricing, billing cycle, badges, and included features</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field-row">
+      <div class="field" style="flex:2;">
+        <label>Plan Name *</label>
+        <input id="f_pln_name" value="${esc((plan && plan.name) || '')}" placeholder="e.g. Quarterly Growth Plan / 1 Month Plan" required autofocus />
+      </div>
+      <div class="field" style="flex:1;">
+        <label>Badge / Tag Text</label>
+        <input id="f_pln_badge" value="${esc((plan && plan.badge) || '')}" placeholder="e.g. Popular · Save 20%" />
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Price (${STATE.settings.currencySymbol || '₹'}) *</label>
+        <input type="number" id="f_pln_price" value="${plan ? plan.price : (isTrial ? 0 : 499)}" min="0" step="1" required />
+      </div>
+      <div class="field">
+        <label>Billing Period / Frequency *</label>
+        <select id="f_pln_period">
+          <option value="1 month" ${plan && plan.billingPeriod === '1 month' ? 'selected' : ''}>1 month</option>
+          <option value="3 months" ${plan && plan.billingPeriod === '3 months' ? 'selected' : ''}>3 months (Quarterly)</option>
+          <option value="6 months" ${plan && plan.billingPeriod === '6 months' ? 'selected' : ''}>6 months (Half-Yearly)</option>
+          <option value="1 year" ${plan && plan.billingPeriod === '1 year' ? 'selected' : ''}>1 year (Annual)</option>
+          <option value="14 Days" ${plan && plan.billingPeriod === '14 Days' ? 'selected' : ''}>14 Days (Trial)</option>
+          <option value="__custom__">➕ Custom Duration...</option>
+        </select>
+        <div id="f_pln_period_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_pln_period_custom" placeholder="e.g. 2 years / 45 days" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Badge Theme Color</label>
+        <select id="f_pln_bcolor">
+          <option value="pill-blue" ${plan && plan.badgeColor === 'pill-blue' ? 'selected' : ''}>🔵 Blue Pill</option>
+          <option value="pill-green" ${plan && plan.badgeColor === 'pill-green' ? 'selected' : ''}>🟢 Green Pill (Popular)</option>
+          <option value="pill-purple" ${plan && plan.badgeColor === 'pill-purple' ? 'selected' : ''}>🟣 Purple Pill (Best Value)</option>
+          <option value="pill-amber" ${plan && plan.badgeColor === 'pill-amber' ? 'selected' : ''}>🟡 Amber Pill</option>
+          <option value="pill-gray" ${plan && plan.badgeColor === 'pill-gray' ? 'selected' : ''}>⚪ Slate / Gray Pill</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Plan Short Description / Subtitle</label>
+      <input id="f_pln_desc" value="${esc((plan && plan.description) || '')}" placeholder="e.g. Standard flexible monthly license for scaling agencies." />
+    </div>
+
+    <div class="field">
+      <label>Included Features & Perks (One feature bullet per line) *</label>
+      <textarea id="f_pln_features" rows="4" placeholder="Unlimited Clients & Retainers&#10;WhatsApp Notification Engine&#10;Content Studio & Kanban Tasks&#10;Dedicated Employee Portals" style="font-size:12.5px; line-height:1.6;">${esc(currentFeaturesText)}</textarea>
+    </div>
+
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:10px; padding:12px 14px; margin-bottom:18px;">
+      <div style="display:flex; gap:20px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; font-size:13px; font-weight:600; text-transform:none;">
+          <input type="checkbox" id="f_pln_is_popular" ${plan && plan.isPopular ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--brand);" />
+          <span>⭐ Highlight as Featured / Most Popular</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; font-size:13px; font-weight:600; text-transform:none;">
+          <input type="checkbox" id="f_pln_is_trial" ${isTrial ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--accent-amber);" />
+          <span>🧪 Free Evaluation / Trial Tier</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="display:flex; justify-content:space-between; align-items:center;">
+      ${isEditing ? `<button class="btn btn-danger-ghost btn-sm" id="btnDelPlanInModal">🗑️ Delete Plan</button>` : '<div></div>'}
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveSaasPlan">💾 Save Plan Tier</button>
+      </div>
+    </div>
+  `, 600);
+
+  const perSel = document.getElementById('f_pln_period');
+  if (perSel) {
+    perSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_pln_period_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_pln_period_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  document.getElementById('btnSaveSaasPlan').onclick = () => {
+    const name = document.getElementById('f_pln_name').value.trim();
+    if (!name) { toast('Plan name is required'); return; }
+
+    const badge = document.getElementById('f_pln_badge').value.trim() || name;
+    const price = Number(document.getElementById('f_pln_price').value) || 0;
+    
+    let period = document.getElementById('f_pln_period').value;
+    if (period === '__custom__') {
+      period = (document.getElementById('f_pln_period_custom') ? document.getElementById('f_pln_period_custom').value.trim() : '') || '1 month';
+    }
+
+    const badgeColor = document.getElementById('f_pln_bcolor').value;
+    const description = document.getElementById('f_pln_desc').value.trim();
+    const rawFeatures = document.getElementById('f_pln_features').value.trim();
+    const features = rawFeatures.split('\n').map(f => f.trim()).filter(Boolean);
+    const isPopular = document.getElementById('f_pln_is_popular').checked;
+    const isTrialTier = document.getElementById('f_pln_is_trial').checked;
+
+    const plansList = getSaasPlans();
+
+    if (isEditing && plan) {
+      plan.name = name;
+      plan.badge = badge;
+      plan.badgeColor = badgeColor;
+      plan.price = price;
+      plan.billingPeriod = period;
+      plan.description = description;
+      plan.features = features.length ? features : ['Full system access'];
+      plan.isPopular = isPopular;
+      plan.isTrial = isTrialTier;
+    } else {
+      const newPlan = {
+        id: `plan_${Date.now()}`,
+        name,
+        badge,
+        badgeColor,
+        price,
+        billingPeriod: period,
+        description,
+        features: features.length ? features : ['Full system access'],
+        isPopular,
+        isTrial: isTrialTier
+      };
+      plansList.push(newPlan);
+    }
+
+    saveState();
+    closeModal();
+    toast(`✓ Successfully saved "${name}" plan tier!`);
+    render();
+  };
+
+  const delBtn = document.getElementById('btnDelPlanInModal');
+  if (delBtn && planId) {
+    delBtn.onclick = () => {
+      closeModal();
+      deleteSaasPlan(planId);
+    };
+  }
+}
+window.openEditSaasPlanModal = openEditSaasPlanModal;
+
+function deleteSaasPlan(planId) {
+  const plans = getSaasPlans();
+  const plan = plans.find(p => p.id === planId);
+  if (!plan) return;
+
+  if (confirm(`Are you sure you want to delete the plan "${plan.name}" (${plan.price === 0 ? 'Free' : `₹${plan.price}`})?`)) {
+    STATE.saasPlans = plans.filter(p => p.id !== planId);
+    saveState();
+    toast(`✓ Deleted plan "${plan.name}"`);
+    render();
+  }
+}
+window.deleteSaasPlan = deleteSaasPlan;
+
+function resetSaasPlansToDefault() {
+  if (confirm('Reset all subscription plan tiers back to factory defaults?')) {
+    STATE.saasPlans = JSON.parse(JSON.stringify(DEFAULT_SAAS_PLANS));
+    saveState();
+    toast('✓ Reset all SaaS plans to default tiers');
+    render();
+  }
+}
+window.resetSaasPlansToDefault = resetSaasPlansToDefault;
 
 function toggleCompanyStatus(compId) {
   const comp = STATE.companies.find(c => c.id === compId);
