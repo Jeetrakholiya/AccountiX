@@ -1202,6 +1202,21 @@ const LEAD_STAGES = [
 
 function getProfessionConfig(profKey) {
   const k = profKey || (STATE.settings && STATE.settings.profession) || 'general';
+  if (k === 'custom') {
+    const cust = (STATE.settings && STATE.settings.customProfessionConfig) || {};
+    return {
+      id: 'custom',
+      name: cust.name || 'Custom Business Enterprise',
+      shortName: cust.shortName || cust.name || 'Custom Business',
+      icon: cust.icon || '💼',
+      tagline: cust.tagline || `${cust.name || 'Custom Business'} Operating System & Financial Engine`,
+      clientTerm: cust.clientTerm || 'Client Accounts & Cases',
+      serviceTerm: cust.serviceTerm || 'Service Contracts & Retainers',
+      deliverableTerm: cust.deliverableTerm || 'Deliverables & Work Orders',
+      teamTerm: cust.teamTerm || 'Team Members & Specialists',
+      services: (STATE.serviceCatalog && STATE.serviceCatalog.length) ? STATE.serviceCatalog : (cust.services || INDUSTRY_CONFIGS.general.services)
+    };
+  }
   return INDUSTRY_CONFIGS[k] || INDUSTRY_CONFIGS.general;
 }
 
@@ -2291,6 +2306,7 @@ window.applyIndustryTemplate = applyIndustryTemplate;
 
 function openProfessionSelectModal() {
   const currentProf = (STATE.settings && STATE.settings.profession) || 'general';
+  const customCfg = (STATE.settings && STATE.settings.customProfessionConfig) || {};
   
   showModal(`
     <div class="modal-header">
@@ -2331,32 +2347,56 @@ function openProfessionSelectModal() {
           </div>
         `;
       }).join('')}
+
+      <!-- Custom Business Profession Card -->
+      <div class="card" style="border:2px dashed ${currentProf === 'custom' ? 'var(--brand)' : 'var(--border-card)'}; border-radius:12px; padding:14px; background:${currentProf === 'custom' ? 'rgba(99,102,241,0.06)' : 'var(--bg-subtle)'}; cursor:pointer;" onclick="closeModal(); openSetTargetModal('custom');">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:24px;">${customCfg.icon || '💼'}</span>
+            <div>
+              <h4 style="font-size:14px; font-weight:800; color:var(--text-primary); margin:0;">${esc(customCfg.name || '➕ Custom Business Type')}</h4>
+              <div style="font-size:11px; color:var(--text-muted);">Personalized Profession Engine</div>
+            </div>
+          </div>
+          ${currentProf === 'custom' ? '<span class="pill pill-green" style="font-size:10px; font-weight:800;">ACTIVE</span>' : '<span class="pill pill-brand" style="font-size:10px;">CUSTOM</span>'}
+        </div>
+        <p style="font-size:12px; color:var(--text-secondary); line-height:1.45; margin:6px 0 10px 0;">Define your own business name (e.g. Clinic, Interior Studio, Fitness, School) with custom client & deliverable terms.</p>
+        <button class="btn btn-signal btn-sm" style="width:100%; margin-top:10px; font-weight:700; font-size:12px;">
+          ✏️ Configure Custom Profession
+        </button>
+      </div>
     </div>
 
     <div style="display:flex; justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
     </div>
-  `, 720);
+  `, 740);
 }
 window.openProfessionSelectModal = openProfessionSelectModal;
 
-function openSetTargetModal() {
+function openSetTargetModal(defaultProfKey = null) {
   const currTarget = Number(STATE._simTargetProfit) || 150000;
   const currAvg = Number(STATE._simAvgRetainer) || 45000;
-  const prof = getProfessionConfig();
+  const currentProf = defaultProfKey || (STATE.settings && STATE.settings.profession) || 'general';
+  const prof = getProfessionConfig(currentProf);
+  const customCfg = (STATE.settings && STATE.settings.customProfessionConfig) || {};
+
+  const defNeeded = (STATE._simCustomClients !== undefined && STATE._simCustomClients !== null) ? Number(STATE._simCustomClients) : Math.max(1, Math.ceil(currTarget / (currAvg * 0.6)));
+  const defOutput = (STATE._simCustomOutput !== undefined && STATE._simCustomOutput !== null) ? Number(STATE._simCustomOutput) : Math.round(defNeeded * 2.8);
+  const defTeam = (STATE._simCustomTeam !== undefined && STATE._simCustomTeam !== null) ? Number(STATE._simCustomTeam) : Math.max(1, Math.ceil(defNeeded / 4));
 
   showModal(`
     <div class="modal-header">
       <div>
         <h3 class="modal-title">🎯 Set Monthly Revenue & Profit Target</h3>
-        <div style="font-size:12.5px; color:var(--text-muted);">Interactive growth simulator for <b>${esc(prof.name)}</b></div>
+        <div style="font-size:12.5px; color:var(--text-muted);">Interactive growth simulator & operating capacity for <b>${esc(prof.name)}</b></div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
     <div class="field" style="margin-bottom:14px;">
       <label style="font-weight:700;">Target Monthly Net Profit (${STATE.settings.currencySymbol || '₹'}) *</label>
-      <input type="number" id="f_target_amount" value="${currTarget}" step="5000" min="10000" style="font-size:18px; font-weight:800; color:var(--signal-cash); font-family:'JetBrains Mono', monospace;" required autofocus />
+      <input type="number" id="f_target_amount" value="${currTarget}" step="5000" min="5000" style="font-size:18px; font-weight:800; color:var(--signal-cash); font-family:'JetBrains Mono', monospace;" required autofocus />
     </div>
 
     <!-- Quick Preset Chips -->
@@ -2364,89 +2404,220 @@ function openSetTargetModal() {
       <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Quick Target Presets:</div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         ${[50000, 100000, 200000, 350000, 500000, 1000000, 2500000].map(amt => `
-          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('f_target_amount').value = ${amt}; updateTargetSimPreview();" style="font-size:11.5px; padding:4px 10px; font-weight:700;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('f_target_amount').value = ${amt}; calculateCapacityFromFormulas();" style="font-size:11.5px; padding:4px 10px; font-weight:700;">
             ${fmtMoney(amt)}
           </button>
         `).join('')}
       </div>
     </div>
 
-    <div class="field-row" style="margin-bottom:18px;">
+    <div class="field-row" style="margin-bottom:16px;">
       <div class="field">
         <label style="font-weight:700;">Average Client Retainer / Contract Ticket (${STATE.settings.currencySymbol || '₹'})</label>
-        <input type="number" id="f_target_avg_ticket" value="${currAvg}" step="2000" min="1000" oninput="updateTargetSimPreview()" />
+        <input type="number" id="f_target_avg_ticket" value="${currAvg}" step="1000" min="500" oninput="calculateCapacityFromFormulas()" />
       </div>
       <div class="field">
         <label style="font-weight:700;">Active Business Profession</label>
-        <select id="f_target_prof" onchange="applyIndustryTemplate(this.value, false); updateTargetSimPreview();">
+        <select id="f_target_prof" onchange="toggleCustomProfessionFields();">
           ${Object.values(INDUSTRY_CONFIGS).map(c => `
-            <option value="${c.id}" ${c.id === prof.id ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>
+            <option value="${c.id}" ${c.id === currentProf ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>
           `).join('')}
+          <option value="custom" ${currentProf === 'custom' ? 'selected' : ''}>➕ Custom Profession / Other Business...</option>
         </select>
       </div>
     </div>
 
-    <!-- Live Preview Box -->
-    <div id="targetSimPreviewBox" style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:10px; padding:14px; margin-bottom:20px;">
-      <!-- Populated dynamically -->
+    <!-- Custom Business Definition Box (Shown when Custom is selected) -->
+    <div id="customProfSection" style="display:${currentProf === 'custom' ? 'block' : 'none'}; background:linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.05)); border:1.5px solid var(--brand); border-radius:12px; padding:16px; margin-bottom:18px;">
+      <div style="font-size:12.5px; font-weight:800; color:var(--brand); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+        <span>✨</span> Custom Business & Industry Configuration
+      </div>
+      <div class="field-row" style="margin-bottom:10px;">
+        <div class="field" style="flex:2; margin-bottom:0;">
+          <label style="font-size:11.5px;">Business / Profession Name *</label>
+          <input id="f_cust_name" value="${esc(customCfg.name || '')}" placeholder="e.g. Dental Clinic, Interior Studio, Fitness Hub" />
+        </div>
+        <div class="field" style="flex:1; margin-bottom:0;">
+          <label style="font-size:11.5px;">Icon / Emoji</label>
+          <input id="f_cust_icon" value="${esc(customCfg.icon || '💼')}" placeholder="💼, 🦷, 🏡, 🏋️" />
+        </div>
+      </div>
+      <div class="field-row" style="margin-bottom:0;">
+        <div class="field" style="margin-bottom:0;">
+          <label style="font-size:11px;">Client / Account Term</label>
+          <input id="f_cust_cl_term" value="${esc(customCfg.clientTerm || 'Client Accounts')}" placeholder="e.g. Patients, Students, Clients" />
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label style="font-size:11px;">Deliverables / Work Term</label>
+          <input id="f_cust_del_term" value="${esc(customCfg.deliverableTerm || 'Monthly Deliverables')}" placeholder="e.g. Treatments, 3D Plans, Orders" />
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label style="font-size:11px;">Team Specialists Term</label>
+          <input id="f_cust_tm_term" value="${esc(customCfg.teamTerm || 'Team Specialists')}" placeholder="e.g. Doctors, Architects, Staff" />
+        </div>
+      </div>
+    </div>
+
+    <!-- DIRECTLY EDITABLE OPERATING CAPACITY & METRIC GOALS -->
+    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:16px; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <div style="font-size:12px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px;">
+          📊 Operating Capacity & Target Volumes (Directly Editable):
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="calculateCapacityFromFormulas(true)" style="font-size:11px; padding:3px 8px;">
+          🔄 Recalculate from Formulas
+        </button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+        <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
+          <label id="lbl_target_clients" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
+            Target Client Accounts
+          </label>
+          <input type="number" id="f_target_clients" value="${defNeeded}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--signal-cash); text-align:center;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Active accounts goal</div>
+        </div>
+
+        <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
+          <label id="lbl_target_output" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
+            Monthly Output Volume
+          </label>
+          <input type="number" id="f_target_output" value="${defOutput}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--brand); text-align:center;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Monthly deliverables</div>
+        </div>
+
+        <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
+          <label id="lbl_target_team" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
+            Team Capacity / Staff
+          </label>
+          <input type="number" id="f_target_team" value="${defTeam}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--accent-cyan); text-align:center;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Execution workforce</div>
+        </div>
+      </div>
     </div>
 
     <div style="display:flex; justify-content:flex-end; gap:8px;">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" id="btnSaveTargetConfig">🎯 Save Business Target</button>
     </div>
-  `, 560);
+  `, 620);
 
-  function updateTargetSimPreview() {
-    const box = document.getElementById('targetSimPreviewBox');
-    if (!box) return;
+  function toggleCustomProfessionFields() {
+    const pKey = document.getElementById('f_target_prof').value;
+    const sec = document.getElementById('customProfSection');
+    if (sec) {
+      sec.style.display = (pKey === 'custom') ? 'block' : 'none';
+    }
+    updateTermLabels();
+    calculateCapacityFromFormulas(false);
+  }
+  window.toggleCustomProfessionFields = toggleCustomProfessionFields;
+
+  function updateTermLabels() {
+    const pKey = document.getElementById('f_target_prof').value;
+    let clientTerm = 'Active Accounts';
+    let outputTerm = 'Monthly Output';
+    let teamTerm = 'Team Capacity';
+
+    if (pKey === 'custom') {
+      clientTerm = (document.getElementById('f_cust_cl_term') && document.getElementById('f_cust_cl_term').value.trim()) || 'Client Accounts';
+      outputTerm = (document.getElementById('f_cust_del_term') && document.getElementById('f_cust_del_term').value.trim()) || 'Deliverables';
+      teamTerm = (document.getElementById('f_cust_tm_term') && document.getElementById('f_cust_tm_term').value.trim()) || 'Team Staff';
+    } else {
+      const cfg = INDUSTRY_CONFIGS[pKey] || INDUSTRY_CONFIGS.general;
+      clientTerm = cfg.clientTerm;
+      outputTerm = cfg.deliverableTerm;
+      teamTerm = cfg.teamTerm;
+    }
+
+    const l1 = document.getElementById('lbl_target_clients'); if (l1) l1.textContent = clientTerm;
+    const l2 = document.getElementById('lbl_target_output'); if (l2) l2.textContent = outputTerm;
+    const l3 = document.getElementById('lbl_target_team'); if (l3) l3.textContent = teamTerm;
+  }
+  window.updateTermLabels = updateTermLabels;
+
+  function calculateCapacityFromFormulas(force = false) {
     const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
     const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
-    const pKey = document.getElementById('f_target_prof').value;
-    const pCfg = INDUSTRY_CONFIGS[pKey] || INDUSTRY_CONFIGS.general;
 
-    const needed = Math.ceil(tAmt / (aAmt * 0.6));
+    const needed = Math.max(1, Math.ceil(tAmt / (aAmt * 0.6)));
     const estimatedWork = Math.round(needed * 2.8);
     const capacity = Math.max(1, Math.ceil(needed / 4));
 
-    box.innerHTML = `
-      <div style="font-size:12px; font-weight:800; color:var(--brand); text-transform:uppercase; margin-bottom:10px;">
-        📊 Required Operating Capacity for ${fmtMoney(tAmt)}/mo:
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; text-align:center;">
-        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
-          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">${esc(pCfg.clientTerm.toUpperCase())}</div>
-          <div class="mono" style="font-size:16px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${needed}</div>
-        </div>
-        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
-          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">MONTHLY OUTPUT</div>
-          <div class="mono" style="font-size:16px; font-weight:800; color:var(--brand); margin-top:2px;">~${estimatedWork}</div>
-        </div>
-        <div style="padding:8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-subtle);">
-          <div style="font-size:10px; color:var(--text-muted); font-weight:700;">TEAM CAPACITY</div>
-          <div class="mono" style="font-size:16px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${capacity} Staff</div>
-        </div>
-      </div>
-    `;
-  }
-  window.updateTargetSimPreview = updateTargetSimPreview;
-  updateTargetSimPreview();
+    const inClients = document.getElementById('f_target_clients');
+    const inOutput = document.getElementById('f_target_output');
+    const inTeam = document.getElementById('f_target_team');
 
-  document.getElementById('f_target_amount').oninput = updateTargetSimPreview;
+    if (force || !inClients.dataset.userEdited) {
+      if (inClients) inClients.value = needed;
+    }
+    if (force || !inOutput.dataset.userEdited) {
+      if (inOutput) inOutput.value = estimatedWork;
+    }
+    if (force || !inTeam.dataset.userEdited) {
+      if (inTeam) inTeam.value = capacity;
+    }
+    updateTermLabels();
+  }
+  window.calculateCapacityFromFormulas = calculateCapacityFromFormulas;
+
+  ['f_target_clients', 'f_target_output', 'f_target_team'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.oninput = () => { el.dataset.userEdited = 'true'; };
+    }
+  });
+
+  document.getElementById('f_target_amount').oninput = () => calculateCapacityFromFormulas(false);
 
   document.getElementById('btnSaveTargetConfig').onclick = () => {
     const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
     const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
     const pKey = document.getElementById('f_target_prof').value;
 
+    const clientsCount = Number(document.getElementById('f_target_clients').value) || Math.max(1, Math.ceil(tAmt / (aAmt * 0.6)));
+    const outputCount = Number(document.getElementById('f_target_output').value) || Math.round(clientsCount * 2.8);
+    const teamCount = Number(document.getElementById('f_target_team').value) || Math.max(1, Math.ceil(clientsCount / 4));
+
     STATE._simTargetProfit = tAmt;
     STATE._simAvgRetainer = aAmt;
+    STATE._simCustomClients = clientsCount;
+    STATE._simCustomOutput = outputCount;
+    STATE._simCustomTeam = teamCount;
+
     if (!STATE.settings) STATE.settings = {};
-    STATE.settings.profession = pKey;
+
+    if (pKey === 'custom') {
+      const cName = (document.getElementById('f_cust_name') ? document.getElementById('f_cust_name').value.trim() : '') || 'Custom Business';
+      const cIcon = (document.getElementById('f_cust_icon') ? document.getElementById('f_cust_icon').value.trim() : '') || '💼';
+      const cClTerm = (document.getElementById('f_cust_cl_term') ? document.getElementById('f_cust_cl_term').value.trim() : '') || 'Client Accounts';
+      const cDelTerm = (document.getElementById('f_cust_del_term') ? document.getElementById('f_cust_del_term').value.trim() : '') || 'Monthly Deliverables';
+      const cTmTerm = (document.getElementById('f_cust_tm_term') ? document.getElementById('f_cust_tm_term').value.trim() : '') || 'Team Staff';
+
+      STATE.settings.customProfessionConfig = {
+        id: 'custom',
+        name: cName,
+        shortName: cName,
+        icon: cIcon,
+        tagline: `${cName} Business Operating System & Financial Engine`,
+        clientTerm: cClTerm,
+        deliverableTerm: cDelTerm,
+        teamTerm: cTmTerm,
+        services: (STATE.serviceCatalog && STATE.serviceCatalog.length) ? STATE.serviceCatalog : INDUSTRY_CONFIGS.general.services
+      };
+      STATE.settings.profession = 'custom';
+      STATE.settings.tagline = `${cName} Business OS`;
+    } else {
+      STATE.settings.profession = pKey;
+      if (INDUSTRY_CONFIGS[pKey]) {
+        STATE.settings.tagline = INDUSTRY_CONFIGS[pKey].tagline;
+      }
+    }
 
     saveState();
     closeModal();
-    toast(`🎯 Target set to ${fmtMoney(tAmt)}/mo for ${INDUSTRY_CONFIGS[pKey].shortName}!`);
+    const profCfg = getProfessionConfig();
+    toast(`🎯 Target set to ${fmtMoney(tAmt)}/mo for ${profCfg.shortName}!`);
     render();
   };
 }
@@ -5211,9 +5382,9 @@ function renderDashboardView() {
 
   const targetProfit = Number(STATE._simTargetProfit) || 150000;
   const avgRetainer = Number(STATE._simAvgRetainer) || 45000;
-  const neededClients = Math.max(1, Math.ceil(targetProfit / (avgRetainer * 0.6)));
-  const estimatedOutput = Math.round(neededClients * 2.8);
-  const teamCap = Math.max(1, Math.ceil(neededClients / 4));
+  const neededClients = (STATE._simCustomClients !== undefined && STATE._simCustomClients !== null) ? Number(STATE._simCustomClients) : Math.max(1, Math.ceil(targetProfit / (avgRetainer * 0.6)));
+  const estimatedOutput = (STATE._simCustomOutput !== undefined && STATE._simCustomOutput !== null) ? Number(STATE._simCustomOutput) : Math.round(neededClients * 2.8);
+  const teamCap = (STATE._simCustomTeam !== undefined && STATE._simCustomTeam !== null) ? Number(STATE._simCustomTeam) : Math.max(1, Math.ceil(neededClients / 4));
   const isCleanSlate = (STATE.clients.length === 0 && STATE.payments.length === 0);
 
   return `
@@ -5248,7 +5419,7 @@ function renderDashboardView() {
               </h2>
             </div>
             <p style="font-size:13.5px; color:var(--text-secondary); max-width:640px; margin:0 0 16px 0; line-height:1.55;">
-              Your workspace starts fresh with zero dummy records. AccountiX is built for all professions: <b>CA, Software Devs, IT Firms, Digital Marketers, E-Commerce, Consultants & Freelancers</b>. Follow these 3 quick steps to tailor your engine:
+              Your workspace starts fresh with zero dummy records. AccountiX is built for all professions: <b>CA, Software Devs, IT Firms, Digital Marketers, E-Commerce, Consultants, Healthcare & Custom Businesses</b>. Follow these 3 quick steps to tailor your engine:
             </p>
           </div>
           <button class="btn btn-ghost btn-sm" onclick="if(confirm('Load realistic sample demo data into your workspace?')){ seedData(); render(); toast('Demo data loaded!'); }" style="font-size:11.5px;">
@@ -5259,23 +5430,23 @@ function renderDashboardView() {
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:8px;">
           <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openSetTargetModal()">
             <div style="font-size:22px; margin-bottom:6px;">🎯</div>
-            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">1. Set Revenue Target</div>
-            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Configure your monthly net take-home & average client ticket.</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">1. Set Target & Capacity</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Configure your net profit, client targets, monthly output volume & team size.</div>
             <div style="font-size:11.5px; color:var(--brand); font-weight:700; margin-top:8px;">Set Target (${fmtMoney(targetProfit)}) ➔</div>
           </div>
 
           <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openProfessionSelectModal()">
             <div style="font-size:22px; margin-bottom:6px;">🏷️</div>
-            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">2. Select Your Profession</div>
-            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Load ready-to-use rate card templates for CA, IT, Agency or Devs.</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">2. Select / Add Profession</div>
+            <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Choose CA, IT, Devs, Agency or add your own custom business type.</div>
             <div style="font-size:11.5px; color:var(--signal-cash); font-weight:700; margin-top:8px;">Active: ${esc(prof.shortName)} ➔</div>
           </div>
 
           <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:12px; padding:14px; cursor:pointer;" onclick="openNewClientModal()">
             <div style="font-size:22px; margin-bottom:6px;">👥</div>
-            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">3. Onboard First Client</div>
+            <div style="font-weight:800; font-size:13.5px; color:var(--text-primary);">3. Onboard First Account</div>
             <div style="font-size:12px; color:var(--text-secondary); margin-top:3px;">Add your real client accounts, retainer terms and payment dues.</div>
-            <div style="font-size:11.5px; color:var(--accent-cyan); font-weight:700; margin-top:8px;">+ Add Client Account ➔</div>
+            <div style="font-size:11.5px; color:var(--accent-cyan); font-weight:700; margin-top:8px;">+ Add Account ➔</div>
           </div>
         </div>
       </div>
@@ -5315,7 +5486,7 @@ function renderDashboardView() {
             Target: ${fmtMoney(targetProfit)}/mo
           </div>
           <button class="btn btn-signal btn-sm" onclick="openSetTargetModal()" style="padding:4px 10px; font-size:11.5px; font-weight:700;">
-            🎯 Set Target
+            🎯 Set Target & Capacity
           </button>
         </div>
       </div>
@@ -5323,20 +5494,20 @@ function renderDashboardView() {
       <input type="range" class="slider-range" id="profitSimSlider" min="25000" max="2500000" step="25000" value="${targetProfit}">
 
       <div class="grid grid-3" style="margin-top:14px; margin-bottom:0;">
-        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
+        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle); cursor:pointer;" onclick="openSetTargetModal()" title="Click to customize capacity">
           <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">ACTIVE ${esc(prof.clientTerm.toUpperCase())} NEEDED</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--brand); margin-top:2px;">~${neededClients} Accounts</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--brand); margin-top:2px;">~${neededClients} Accounts ✏️</div>
           <div style="font-size:10.5px; color:var(--text-muted);">at ~${fmtMoney(avgRetainer)} avg retainer</div>
         </div>
-        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
+        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle); cursor:pointer;" onclick="openSetTargetModal()" title="Click to customize capacity">
           <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">ESTIMATED MONTHLY ${esc(prof.deliverableTerm.toUpperCase())}</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${estimatedOutput} Deliverables / mo</div>
-          <div style="font-size:10.5px; color:var(--text-muted);">across all active clients</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--signal-cash); margin-top:2px;">~${estimatedOutput} Output ✏️</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">across active accounts</div>
         </div>
-        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle);">
+        <div style="padding:10px 12px; background:var(--bg-subtle); border-radius:8px; border:1px solid var(--border-subtle); cursor:pointer;" onclick="openSetTargetModal()" title="Click to customize capacity">
           <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">RECOMMENDED ${esc(prof.teamTerm.toUpperCase())}</div>
-          <div class="mono" style="font-size:18px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${teamCap} Staff / Associates</div>
-          <div style="font-size:10.5px; color:var(--text-muted);">Execution capacity</div>
+          <div class="mono" style="font-size:18px; font-weight:800; color:var(--accent-cyan); margin-top:2px;">${teamCap} Staff ✏️</div>
+          <div style="font-size:10.5px; color:var(--text-muted);">Execution workforce capacity</div>
         </div>
       </div>
     </div>
@@ -5395,6 +5566,9 @@ function attachDashboard() {
   if (slider) {
     slider.oninput = (ev) => {
       STATE._simTargetProfit = Number(ev.target.value);
+      delete STATE._simCustomClients;
+      delete STATE._simCustomOutput;
+      delete STATE._simCustomTeam;
       renderMain();
     };
   }
@@ -7741,10 +7915,11 @@ function renderSettingsView() {
         <div class="field"><label>Theme Appearance</label><select id="f_st_thm"><option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Executive Obsidian (Dark Mode - Default)</option><option value="light" ${s.theme === 'light' ? 'selected' : ''}>Clean Slate (Light Mode)</option></select></div>
         <div class="field">
           <label>Business Industry Category</label>
-          <select id="f_st_prof_select" onchange="applyIndustryTemplate(this.value)">
+          <select id="f_st_prof_select" onchange="if(this.value==='custom'){ openSetTargetModal('custom'); } else { applyIndustryTemplate(this.value); }">
             ${Object.values(INDUSTRY_CONFIGS).map(c => `
               <option value="${c.id}" ${c.id === prof.id ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>
             `).join('')}
+            <option value="custom" ${prof.id === 'custom' ? 'selected' : ''}>➕ Custom Profession / Business Type...</option>
           </select>
         </div>
       </div>
