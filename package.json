@@ -1,6 +1,6 @@
 {
   "name": "accountix-fullstack",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "AccountiX — Multi-Tenant Agency Business OS with Express Backend & Supabase PostgreSQL",
   "main": "server.js",
   "scripts": {
