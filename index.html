@@ -3739,7 +3739,11 @@ function openNewAgencySignupModal() {
           <option value="6 Months Plan" selected>6 Months Plan (₹589 / 6 months - Save 18%)</option>
           <option value="1 Year Plan">1 Year Plan (₹999 / 1 year - Save 30%)</option>
           <option value="Starter Trial">14-Day Free Trial (₹0)</option>
+          <option value="__custom__">➕ Custom Plan Tier...</option>
         </select>
+        <div id="f_sg_plan_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_sg_plan_custom" placeholder="Enter custom subscription plan" />
+        </div>
       </div>
     </div>
 
@@ -3749,12 +3753,26 @@ function openNewAgencySignupModal() {
     </div>
   `, 540);
 
+  const sgPlanSel = document.getElementById('f_sg_plan');
+  if (sgPlanSel) {
+    sgPlanSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_sg_plan_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_sg_plan_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('startTrialSubmitBtn').onclick = () => {
     const agencyName = document.getElementById('f_sg_agency').value.trim();
     const ownerName = document.getElementById('f_sg_owner').value.trim();
     const email = document.getElementById('f_sg_email').value.trim();
     const phone = document.getElementById('f_sg_phone').value.trim();
-    const plan = document.getElementById('f_sg_plan').value;
+    
+    let plan = document.getElementById('f_sg_plan').value;
+    if (plan === '__custom__') {
+      plan = (document.getElementById('f_sg_plan_custom') ? document.getElementById('f_sg_plan_custom').value.trim() : '') || 'Custom Plan';
+    }
 
     if (!agencyName || !ownerName || !email) {
       toast('Please enter Agency Name, Founder Name, and Email');
@@ -4248,14 +4266,22 @@ function openAddAgencyModal() {
           <option value="Pro Agency">Pro Agency (₹7,999/mo)</option>
           <option value="Enterprise Suite">Enterprise Suite (₹14,999/mo)</option>
           <option value="Starter Trial">Starter Trial (₹0/mo)</option>
+          <option value="__custom__">➕ Custom Plan...</option>
         </select>
+        <div id="f_comp_plan_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_comp_plan_custom" placeholder="Enter custom plan name" />
+        </div>
       </div>
       <div class="field">
         <label>Initial Status</label>
         <select id="f_comp_status">
           <option value="Active">Active</option>
           <option value="Inactive">Inactive</option>
+          <option value="__custom__">➕ Custom Status...</option>
         </select>
+        <div id="f_comp_status_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_comp_status_custom" placeholder="Enter custom status" />
+        </div>
       </div>
     </div>
 
@@ -4265,11 +4291,40 @@ function openAddAgencyModal() {
     </div>
   `, 500);
 
+  const compPlanSel = document.getElementById('f_comp_plan');
+  if (compPlanSel) {
+    compPlanSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_comp_plan_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_comp_plan_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  const compStatSel = document.getElementById('f_comp_status');
+  if (compStatSel) {
+    compStatSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_comp_status_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_comp_status_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveNewAgencyBtn').onclick = () => {
     const name = document.getElementById('f_comp_name').value.trim();
     const email = document.getElementById('f_comp_email').value.trim();
-    const plan = document.getElementById('f_comp_plan').value;
-    const status = document.getElementById('f_comp_status').value;
+    
+    let plan = document.getElementById('f_comp_plan').value;
+    if (plan === '__custom__') {
+      plan = (document.getElementById('f_comp_plan_custom') ? document.getElementById('f_comp_plan_custom').value.trim() : '') || 'Custom Enterprise';
+    }
+
+    let status = document.getElementById('f_comp_status').value;
+    if (status === '__custom__') {
+      status = (document.getElementById('f_comp_status_custom') ? document.getElementById('f_comp_status_custom').value.trim() : '') || 'Active';
+    }
+
     if (!name || !email) {
       toast('Agency name and owner email are required');
       return;
@@ -5758,12 +5813,12 @@ function openEditServiceCatalogModal(serviceId = null) {
 
     <div class="field">
       <label>Service Package Name *</label>
-      <input id="f_sc_name" value="${esc(item.name || '')}" placeholder="e.g. Performance Meta Ads Scaling" required autofocus />
+      <input id="f_sc_name" value="${esc(item.name || '')}" placeholder="e.g. Performance Meta Ads Scaling / Tax Audit 3CD" required autofocus />
     </div>
 
     <div class="field-row">
       <div class="field">
-        <label>Standard Default Amount (₹) *</label>
+        <label>Standard Default Amount (${STATE.settings.currencySymbol || '₹'}) *</label>
         <input type="number" id="f_sc_amount" value="${item.defaultAmount || 40000}" placeholder="40000" required />
       </div>
       <div class="field">
@@ -5773,7 +5828,12 @@ function openEditServiceCatalogModal(serviceId = null) {
           <option ${item.cycle === 'Project-Based' ? 'selected' : ''}>Project-Based</option>
           <option ${item.cycle === 'One-Time' ? 'selected' : ''}>One-Time</option>
           <option ${item.cycle === 'Quarterly Retainer' ? 'selected' : ''}>Quarterly Retainer</option>
+          <option ${item.cycle === 'Annual Retainer' ? 'selected' : ''}>Annual Retainer</option>
+          <option value="__custom__">➕ Custom Billing Frequency...</option>
         </select>
+        <div id="f_sc_cycle_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_sc_cycle_custom" placeholder="Enter custom billing cycle (e.g. Bi-Weekly / Every 15 Days)" />
+        </div>
       </div>
     </div>
 
@@ -5788,10 +5848,23 @@ function openEditServiceCatalogModal(serviceId = null) {
     </div>
   `, 540);
 
+  const scCycSel = document.getElementById('f_sc_cycle');
+  if (scCycSel) {
+    scCycSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_sc_cycle_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_sc_cycle_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveServiceCatalogBtn').onclick = () => {
     const name = document.getElementById('f_sc_name').value.trim();
     const amount = Number(document.getElementById('f_sc_amount').value);
-    const cycle = document.getElementById('f_sc_cycle').value;
+    let cycle = document.getElementById('f_sc_cycle').value;
+    if (cycle === '__custom__') {
+      cycle = (document.getElementById('f_sc_cycle_custom') ? document.getElementById('f_sc_cycle_custom').value.trim() : '') || 'Custom Cycle';
+    }
     const desc = document.getElementById('f_sc_desc').value.trim();
 
     if (!name || !amount) {
@@ -5832,7 +5905,7 @@ function openPricingCatalogModal() {
 
 function openNewClientModal(prefill = {}) {
   const catalog = getServiceCatalog();
-  const defaultService = prefill.service || catalog[0].name;
+  const defaultService = prefill.service || (catalog[0] ? catalog[0].name : 'Custom Retainer');
   const defaultAmount = prefill.budget || getServiceDefaultPrice(defaultService);
 
   showModal(`
@@ -5850,26 +5923,44 @@ function openNewClientModal(prefill = {}) {
       <label>Service Package (Manager Catalog)</label>
       <select id="f_cl_service">
         ${catalog.map(s => `<option value="${esc(s.name)}" data-price="${s.defaultAmount}" ${s.name === defaultService ? 'selected' : ''}>${esc(s.name)} (${fmtMoney(s.defaultAmount)})</option>`).join('')}
+        <option value="__custom__" data-price="0">➕ Custom Service Package...</option>
       </select>
+      <div id="f_cl_service_custom_box" style="display:none; margin-top:6px;">
+        <input id="f_cl_service_custom" placeholder="Enter custom package name (e.g. Executive Retainer / Full Audit)" />
+      </div>
     </div>
     <div class="field-row">
       <div class="field"><label>Start Date</label><input type="date" id="f_cl_start" value="${todayStr()}" /></div>
       <div class="field"><label>End Date</label><input type="date" id="f_cl_end" value="${addMonths(todayStr(), 1)}" /></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Package Amount (₹)</label><input type="number" id="f_cl_amount" value="${defaultAmount}" /></div>
-      <div class="field"><label>Advance Received (₹)</label><input type="number" id="f_cl_received" value="0" /></div>
+      <div class="field"><label>Package Amount (${STATE.settings.currencySymbol || '₹'})</label><input type="number" id="f_cl_amount" value="${defaultAmount}" /></div>
+      <div class="field"><label>Advance Received (${STATE.settings.currencySymbol || '₹'})</label><input type="number" id="f_cl_received" value="0" /></div>
     </div>
-    <div class="field"><label>Assigned Lead / Specialist</label><select id="f_cl_staff"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}">${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
+    <div class="field">
+      <label>Assigned Lead / Specialist</label>
+      <select id="f_cl_staff">
+        <option value="">— None / Unassigned —</option>
+        ${STATE.staff.map(s => `<option value="${s.id}">${esc(s.name)} (${esc(s.role)})</option>`).join('')}
+      </select>
+    </div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="saveClBtn">Save Client</button></div>
   `, 560);
 
   const servSel = document.getElementById('f_cl_service');
   if (servSel) {
     servSel.onchange = (e) => {
-      const selected = servSel.options[servSel.selectedIndex];
-      const pr = selected.dataset.price;
-      if (pr) document.getElementById('f_cl_amount').value = pr;
+      const isCust = servSel.value === '__custom__';
+      const box = document.getElementById('f_cl_service_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) {
+        const inp = document.getElementById('f_cl_service_custom');
+        if (inp) inp.focus();
+      } else {
+        const selected = servSel.options[servSel.selectedIndex];
+        const pr = selected.dataset.price;
+        if (pr) document.getElementById('f_cl_amount').value = pr;
+      }
     };
   }
 
@@ -5880,7 +5971,13 @@ function openNewClientModal(prefill = {}) {
     STATE.clients.push({ id: cid, name, company: document.getElementById('f_cl_company').value.trim(), mobile: document.getElementById('f_cl_mobile').value.trim(), whatsapp: document.getElementById('f_cl_wa').value.trim(), instagram: document.getElementById('f_cl_insta').value.trim(), status: 'Active', createdAt: new Date().toISOString() });
     const amount = Number(document.getElementById('f_cl_amount').value) || 0;
     const pkgId = uid('pkg');
-    STATE.packages.push({ id: pkgId, clientId: cid, serviceType: document.getElementById('f_cl_service').value, amount, startDate: document.getElementById('f_cl_start').value, endDate: document.getElementById('f_cl_end').value, assignedStaffId: document.getElementById('f_cl_staff').value, status: 'Active' });
+    
+    let servName = document.getElementById('f_cl_service').value;
+    if (servName === '__custom__') {
+      servName = (document.getElementById('f_cl_service_custom') ? document.getElementById('f_cl_service_custom').value.trim() : '') || 'Custom Package';
+    }
+
+    STATE.packages.push({ id: pkgId, clientId: cid, serviceType: servName, amount, startDate: document.getElementById('f_cl_start').value, endDate: document.getElementById('f_cl_end').value, assignedStaffId: document.getElementById('f_cl_staff').value, status: 'Active' });
     const rec = Number(document.getElementById('f_cl_received').value) || 0;
     if (rec > 0) { STATE.payments.push({ id: uid('pay'), clientId: cid, packageId: pkgId, amount: rec, date: todayStr(), mode: 'UPI (GPay / PhonePe / Paytm)', note: 'Advance full/part payment' }); }
     saveState(); closeModal(); toast('Client onboarded successfully'); render();
@@ -5921,7 +6018,7 @@ function openEditPaymentModal(paymentId) {
 
     <div class="field-row">
       <div class="field">
-        <label>Payment Amount Received (₹) *</label>
+        <label>Payment Amount Received (${STATE.settings.currencySymbol || '₹'}) *</label>
         <input type="number" id="f_edit_pm_am" value="${p.amount}" required autofocus />
       </div>
       <div class="field">
@@ -5935,7 +6032,11 @@ function openEditPaymentModal(paymentId) {
         <label>Payment Mode</label>
         <select id="f_edit_pm_md">
           ${PAYMENT_MODES.map(m => `<option ${m === p.mode ? 'selected' : ''}>${m}</option>`).join('')}
+          <option value="__custom__">➕ Custom Payment Mode...</option>
         </select>
+        <div id="f_edit_pm_md_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_edit_pm_md_custom" placeholder="Enter custom payment mode" />
+        </div>
       </div>
       <div class="field">
         <label>Payment Note / Ref</label>
@@ -5952,13 +6053,28 @@ function openEditPaymentModal(paymentId) {
     </div>
   `, 520);
 
+  const pmMdSel = document.getElementById('f_edit_pm_md');
+  if (pmMdSel) {
+    pmMdSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_edit_pm_md_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_edit_pm_md_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('btnSaveEditedPay').onclick = () => {
     const am = Number(document.getElementById('f_edit_pm_am').value);
     if (isNaN(am) || am < 0) { toast('Valid amount required'); return; }
 
+    let modeVal = document.getElementById('f_edit_pm_md').value;
+    if (modeVal === '__custom__') {
+      modeVal = (document.getElementById('f_edit_pm_md_custom') ? document.getElementById('f_edit_pm_md_custom').value.trim() : '') || 'Custom Payment';
+    }
+
     p.amount = am;
     p.date = document.getElementById('f_edit_pm_dt').value;
-    p.mode = document.getElementById('f_edit_pm_md').value;
+    p.mode = modeVal;
     p.note = document.getElementById('f_edit_pm_nt').value.trim();
 
     saveState();
@@ -5989,8 +6105,8 @@ function openEditClientModal(clientId) {
   const catalog = getServiceCatalog();
   const pkg = activePackage(clientId) || (STATE.packages.find(p => p.clientId === clientId)) || {
     id: uid('pkg'),
-    serviceType: catalog[0].name,
-    amount: catalog[0].defaultAmount,
+    serviceType: catalog[0] ? catalog[0].name : 'Custom Retainer',
+    amount: catalog[0] ? catalog[0].defaultAmount : 35000,
     startDate: todayStr(),
     endDate: addMonths(todayStr(), 1),
     assignedStaffId: '',
@@ -6043,7 +6159,11 @@ function openEditClientModal(clientId) {
           <option value="Inactive" ${c.status === 'Inactive' ? 'selected' : ''}>Inactive / Churned</option>
           <option value="On Hold" ${c.status === 'On Hold' ? 'selected' : ''}>On Hold / Paused</option>
           <option value="Completed" ${c.status === 'Completed' ? 'selected' : ''}>Completed / Closed</option>
+          <option value="__custom__">➕ Custom Account Status...</option>
         </select>
+        <div id="f_edit_cl_status_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_edit_cl_status_custom" placeholder="Enter custom status" />
+        </div>
       </div>
       <div class="field">
         <label>Assigned Lead / Specialist</label>
@@ -6063,7 +6183,11 @@ function openEditClientModal(clientId) {
         <label>Active Service Package</label>
         <select id="f_edit_cl_service">
           ${catalog.map(s => `<option value="${esc(s.name)}" data-price="${s.defaultAmount}" ${pkg.serviceType === s.name ? 'selected' : ''}>${esc(s.name)} (${fmtMoney(s.defaultAmount)})</option>`).join('')}
+          <option value="__custom__" data-price="0">➕ Custom Service Package...</option>
         </select>
+        <div id="f_edit_cl_service_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_edit_cl_service_custom" placeholder="Enter custom package name" />
+        </div>
       </div>
 
       <div class="field-row">
@@ -6079,7 +6203,7 @@ function openEditClientModal(clientId) {
 
       <div class="field-row">
         <div class="field">
-          <label>Retainer Package Amount (₹)</label>
+          <label>Retainer Package Amount (${STATE.settings.currencySymbol || '₹'})</label>
           <input type="number" id="f_edit_cl_amount" value="${pkg.amount || 0}" />
         </div>
         <div class="field">
@@ -6088,7 +6212,11 @@ function openEditClientModal(clientId) {
             <option value="Active" ${pkg.status === 'Active' ? 'selected' : ''}>Active</option>
             <option value="Expired" ${pkg.status === 'Expired' ? 'selected' : ''}>Expired</option>
             <option value="Cancelled" ${pkg.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+            <option value="__custom__">➕ Custom Status...</option>
           </select>
+          <div id="f_edit_pkg_status_custom_box" style="display:none; margin-top:6px;">
+            <input id="f_edit_pkg_status_custom" placeholder="Enter custom package status" />
+          </div>
         </div>
       </div>
     </div>
@@ -6145,9 +6273,37 @@ function openEditClientModal(clientId) {
   const servSel = document.getElementById('f_edit_cl_service');
   if (servSel) {
     servSel.onchange = () => {
-      const selected = servSel.options[servSel.selectedIndex];
-      const pr = selected.dataset.price;
-      if (pr) document.getElementById('f_edit_cl_amount').value = pr;
+      const isCust = servSel.value === '__custom__';
+      const box = document.getElementById('f_edit_cl_service_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) {
+        const inp = document.getElementById('f_edit_cl_service_custom');
+        if (inp) inp.focus();
+      } else {
+        const selected = servSel.options[servSel.selectedIndex];
+        const pr = selected.dataset.price;
+        if (pr) document.getElementById('f_edit_cl_amount').value = pr;
+      }
+    };
+  }
+
+  const statSel = document.getElementById('f_edit_cl_status');
+  if (statSel) {
+    statSel.onchange = () => {
+      const isCust = statSel.value === '__custom__';
+      const box = document.getElementById('f_edit_cl_status_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_edit_cl_status_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  const pkgStatSel = document.getElementById('f_edit_pkg_status');
+  if (pkgStatSel) {
+    pkgStatSel.onchange = () => {
+      const isCust = pkgStatSel.value === '__custom__';
+      const box = document.getElementById('f_edit_pkg_status_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_edit_pkg_status_custom'); if (inp) inp.focus(); }
     };
   }
 
@@ -6155,20 +6311,33 @@ function openEditClientModal(clientId) {
     const name = document.getElementById('f_edit_cl_name').value.trim();
     if (!name) { toast('Client name is required'); return; }
 
+    let stVal = document.getElementById('f_edit_cl_status').value;
+    if (stVal === '__custom__') {
+      stVal = (document.getElementById('f_edit_cl_status_custom') ? document.getElementById('f_edit_cl_status_custom').value.trim() : '') || 'Active';
+    }
+
     c.name = name;
     c.company = document.getElementById('f_edit_cl_company').value.trim();
     c.mobile = document.getElementById('f_edit_cl_mobile').value.trim();
     c.whatsapp = document.getElementById('f_edit_cl_wa').value.trim();
     c.instagram = document.getElementById('f_edit_cl_insta').value.trim();
-    c.status = document.getElementById('f_edit_cl_status').value;
+    c.status = stVal;
     c.notes = document.getElementById('f_edit_cl_notes').value.trim();
 
-    const serviceType = document.getElementById('f_edit_cl_service').value;
+    let serviceType = document.getElementById('f_edit_cl_service').value;
+    if (serviceType === '__custom__') {
+      serviceType = (document.getElementById('f_edit_cl_service_custom') ? document.getElementById('f_edit_cl_service_custom').value.trim() : '') || 'Custom Retainer';
+    }
+
     const amount = Number(document.getElementById('f_edit_cl_amount').value) || 0;
     const startDate = document.getElementById('f_edit_cl_start').value;
     const endDate = document.getElementById('f_edit_cl_end').value;
     const assignedStaffId = document.getElementById('f_edit_cl_staff').value;
-    const pkgStatus = document.getElementById('f_edit_pkg_status').value;
+    
+    let pkgStatus = document.getElementById('f_edit_pkg_status').value;
+    if (pkgStatus === '__custom__') {
+      pkgStatus = (document.getElementById('f_edit_pkg_status_custom') ? document.getElementById('f_edit_pkg_status_custom').value.trim() : '') || 'Active';
+    }
 
     let targetPkg = STATE.packages.find(p => p.id === pkg.id);
     if (targetPkg) {
@@ -6551,12 +6720,13 @@ function renderMultiRenewModalContent(clientId) {
                   ${esc(s.name)} — Standard: ${fmtMoney(s.defaultAmount)}
                 </option>
               `).join('')}
+              <option value="__custom__" data-default="35000">➕ Custom Service Package...</option>
             </select>
           </div>
 
           <div class="field-row" style="margin-bottom:8px;">
             <div class="field" style="margin-bottom:0;">
-              <label style="font-size:11px;">Amount (₹)</label>
+              <label style="font-size:11px;">Amount (${STATE.settings.currencySymbol || '₹'})</label>
               <input type="number" class="renew-input" data-row-field="amount" data-idx="${idx}" value="${row.amount}" style="font-size:12.5px; padding:7px 10px;" />
             </div>
             <div class="field" style="margin-bottom:0;">
@@ -6592,14 +6762,18 @@ function renderMultiRenewModalContent(clientId) {
 
     <div class="field-row" style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border-subtle);">
       <div class="field" style="margin-bottom:0;">
-        <label>Payment Received Now (₹)</label>
+        <label>Payment Received Now (${STATE.settings.currencySymbol || '₹'})</label>
         <input type="number" id="f_rn_rec_pay" value="0" placeholder="0" />
       </div>
       <div class="field" style="margin-bottom:0;">
         <label>Payment Mode</label>
         <select id="f_rn_rec_mode">
           ${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}
+          <option value="__custom__">➕ Custom Payment Mode...</option>
         </select>
+        <div id="f_rn_rec_mode_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_rn_rec_mode_custom" placeholder="Enter custom payment mode" />
+        </div>
       </div>
     </div>
 
@@ -6611,13 +6785,30 @@ function renderMultiRenewModalContent(clientId) {
     </div>
   `, 640);
 
+  const rnModeSel = document.getElementById('f_rn_rec_mode');
+  if (rnModeSel) {
+    rnModeSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_rn_rec_mode_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_rn_rec_mode_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.querySelectorAll('.renew-service-select').forEach(el => {
     el.onchange = (e) => {
       const idx = Number(el.dataset.idx);
-      const selected = el.options[el.selectedIndex];
-      const defPrice = Number(selected.dataset.default) || 35000;
-      activeRenewRows[idx].serviceType = el.value;
-      activeRenewRows[idx].amount = defPrice;
+      if (el.value === '__custom__') {
+        const custName = prompt('Enter custom service package name:');
+        if (custName && custName.trim()) {
+          activeRenewRows[idx].serviceType = custName.trim();
+        }
+      } else {
+        const selected = el.options[el.selectedIndex];
+        const defPrice = Number(selected.dataset.default) || 35000;
+        activeRenewRows[idx].serviceType = el.value;
+        activeRenewRows[idx].amount = defPrice;
+      }
       renderMultiRenewModalContent(clientId);
     };
   });
@@ -6658,12 +6849,16 @@ function renderMultiRenewModalContent(clientId) {
 
     const recPay = Number(document.getElementById('f_rn_rec_pay').value) || 0;
     if (recPay > 0) {
+      let modeVal = document.getElementById('f_rn_rec_mode').value;
+      if (modeVal === '__custom__') {
+        modeVal = (document.getElementById('f_rn_rec_mode_custom') ? document.getElementById('f_rn_rec_mode_custom').value.trim() : '') || 'Custom Payment';
+      }
       STATE.payments.push({
         id: uid('pay'),
         clientId,
         amount: recPay,
         date: todayStr(),
-        mode: document.getElementById('f_rn_rec_mode').value,
+        mode: modeVal,
         note: `Renewal advance payment (${activeRenewRows.length} services)`
       });
     }
@@ -6794,14 +6989,32 @@ function openContentModal(contentId = null) {
     <div class="field"><label>Client Account *</label><select id="f_cnt_cl">${STATE.clients.map(c => `<option value="${c.id}" ${c.id === it.clientId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field-row">
       <div class="field"><label>Target Date</label><input type="date" id="f_cnt_dt" value="${it.date || todayStr()}" /></div>
-      <div class="field"><label>Deliverable Type</label><select id="f_cnt_tp">${CONTENT_TYPES.map(t => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="field">
+        <label>Deliverable Type</label>
+        <select id="f_cnt_tp">
+          ${CONTENT_TYPES.map(t => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`).join('')}
+          <option value="__custom__">➕ Custom Deliverable Type...</option>
+        </select>
+        <div id="f_cnt_tp_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_cnt_tp_custom" placeholder="Enter custom deliverable type (e.g. Audit Report / Sprint / Reel)" />
+        </div>
+      </div>
     </div>
     <div class="field"><label>Deliverable Title / Topic / Scope</label><input id="f_cnt_top" value="${esc(it.topic || '')}" placeholder="e.g. Q3 Tax Audit Report / Sprint 4 Payment Gateway" /></div>
     <div class="field-row">
       <div class="field"><label>Assigned Lead / Specialist</label><select id="f_cnt_sh"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.shootById ? 'selected' : ''}>${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
       <div class="field"><label>Reviewer / Collaborator</label><select id="f_cnt_ed"><option value="">— None —</option>${STATE.staff.map(s => `<option value="${s.id}" ${s.id === it.assignedStaffId ? 'selected' : ''}>${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
     </div>
-    <div class="field"><label>Workflow Status</label><select id="f_cnt_st">${CONTENT_STATUSES.map(s => `<option ${s === it.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+    <div class="field">
+      <label>Workflow Status</label>
+      <select id="f_cnt_st">
+        ${CONTENT_STATUSES.map(s => `<option ${s === it.status ? 'selected' : ''}>${s}</option>`).join('')}
+        <option value="__custom__">➕ Custom Status...</option>
+      </select>
+      <div id="f_cnt_st_custom_box" style="display:none; margin-top:6px;">
+        <input id="f_cnt_st_custom" placeholder="Enter custom workflow status" />
+      </div>
+    </div>
     <div class="field"><label>Deliverable / Drive / Code Link</label><input id="f_cnt_lk" value="${esc(it.driveLink || '')}" placeholder="https://drive.google.com/... or https://github.com/..." /></div>
     <div class="modal-actions">
       ${contentId ? `<button class="btn btn-danger-ghost" id="delCntBtn" style="margin-right:auto;">Delete</button>` : ''}
@@ -6809,12 +7022,44 @@ function openContentModal(contentId = null) {
       <button class="btn btn-primary" id="saveCntBtn">Save Deliverable</button>
     </div>
   `, 560);
+
+  const tpSel = document.getElementById('f_cnt_tp');
+  if (tpSel) {
+    tpSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_cnt_tp_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_cnt_tp_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  const stSel = document.getElementById('f_cnt_st');
+  if (stSel) {
+    stSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_cnt_st_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_cnt_st_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveCntBtn').onclick = () => {
     const cid = document.getElementById('f_cnt_cl').value;
+    
+    let typeVal = document.getElementById('f_cnt_tp').value;
+    if (typeVal === '__custom__') {
+      typeVal = (document.getElementById('f_cnt_tp_custom') ? document.getElementById('f_cnt_tp_custom').value.trim() : '') || 'Custom Deliverable';
+    }
+
+    let statusVal = document.getElementById('f_cnt_st').value;
+    if (statusVal === '__custom__') {
+      statusVal = (document.getElementById('f_cnt_st_custom') ? document.getElementById('f_cnt_st_custom').value.trim() : '') || 'In Progress';
+    }
+
     if (contentId) {
-      Object.assign(it, { clientId: cid, date: document.getElementById('f_cnt_dt').value, type: document.getElementById('f_cnt_tp').value, topic: document.getElementById('f_cnt_top').value.trim(), shootById: document.getElementById('f_cnt_sh').value, assignedStaffId: document.getElementById('f_cnt_ed').value, status: document.getElementById('f_cnt_st').value, driveLink: document.getElementById('f_cnt_lk').value.trim() });
+      Object.assign(it, { clientId: cid, date: document.getElementById('f_cnt_dt').value, type: typeVal, topic: document.getElementById('f_cnt_top').value.trim(), shootById: document.getElementById('f_cnt_sh').value, assignedStaffId: document.getElementById('f_cnt_ed').value, status: statusVal, driveLink: document.getElementById('f_cnt_lk').value.trim() });
     } else {
-      STATE.contentItems.push({ id: uid('cnt'), clientId: cid, date: document.getElementById('f_cnt_dt').value, type: document.getElementById('f_cnt_tp').value, topic: document.getElementById('f_cnt_top').value.trim(), shootById: document.getElementById('f_cnt_sh').value, assignedStaffId: document.getElementById('f_cnt_ed').value, status: document.getElementById('f_cnt_st').value, driveLink: document.getElementById('f_cnt_lk').value.trim() });
+      STATE.contentItems.push({ id: uid('cnt'), clientId: cid, date: document.getElementById('f_cnt_dt').value, type: typeVal, topic: document.getElementById('f_cnt_top').value.trim(), shootById: document.getElementById('f_cnt_sh').value, assignedStaffId: document.getElementById('f_cnt_ed').value, status: statusVal, driveLink: document.getElementById('f_cnt_lk').value.trim() });
     }
     saveState(); closeModal(); toast('Deliverable saved'); render();
   };
@@ -6911,12 +7156,30 @@ function openLeadModal(leadId = null) {
       <div class="field"><label>Phone / WhatsApp</label><input id="f_ld_ph" value="${esc(l.phone || '')}" /></div>
     </div>
     <div class="field-row">
-      <div class="field"><label>Service (Catalog)</label><select id="f_ld_sv">${catalog.map(s => `<option ${s.name === l.service ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
-      <div class="field"><label>Budget (₹)</label><input type="number" id="f_ld_bg" value="${l.budget || 35000}" /></div>
+      <div class="field">
+        <label>Service (Catalog)</label>
+        <select id="f_ld_sv">
+          ${catalog.map(s => `<option ${s.name === l.service ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}
+          <option value="__custom__">➕ Custom Service / Package...</option>
+        </select>
+        <div id="f_ld_sv_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_ld_sv_custom" placeholder="Enter custom requested service" />
+        </div>
+      </div>
+      <div class="field"><label>Budget (${STATE.settings.currencySymbol || '₹'})</label><input type="number" id="f_ld_bg" value="${l.budget || 35000}" /></div>
     </div>
     <div class="field-row">
       <div class="field"><label>Follow-up Date</label><input type="date" id="f_ld_fu" value="${l.followUpDate || todayStr()}" /></div>
-      <div class="field"><label>Stage</label><select id="f_ld_st">${LEAD_STAGES.map(s => `<option ${s === l.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="field">
+        <label>Stage</label>
+        <select id="f_ld_st">
+          ${LEAD_STAGES.map(s => `<option ${s === l.status ? 'selected' : ''}>${s}</option>`).join('')}
+          <option value="__custom__">➕ Custom Pipeline Stage...</option>
+        </select>
+        <div id="f_ld_st_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_ld_st_custom" placeholder="Enter custom stage" />
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       ${leadId ? `<button class="btn btn-danger-ghost" id="delLdBtn" style="margin-right:auto;">Delete</button>` : ''}
@@ -6924,13 +7187,45 @@ function openLeadModal(leadId = null) {
       <button class="btn btn-primary" id="saveLdBtn">Save Lead</button>
     </div>
   `, 540);
+
+  const ldSvSel = document.getElementById('f_ld_sv');
+  if (ldSvSel) {
+    ldSvSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_ld_sv_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_ld_sv_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  const ldStSel = document.getElementById('f_ld_st');
+  if (ldStSel) {
+    ldStSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_ld_st_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_ld_st_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveLdBtn').onclick = () => {
     const nm = document.getElementById('f_ld_nm').value.trim();
     if (!nm) { toast('Contact name required'); return; }
+
+    let svVal = document.getElementById('f_ld_sv').value;
+    if (svVal === '__custom__') {
+      svVal = (document.getElementById('f_ld_sv_custom') ? document.getElementById('f_ld_sv_custom').value.trim() : '') || 'Custom Service';
+    }
+
+    let stVal = document.getElementById('f_ld_st').value;
+    if (stVal === '__custom__') {
+      stVal = (document.getElementById('f_ld_st_custom') ? document.getElementById('f_ld_st_custom').value.trim() : '') || 'New';
+    }
+
     if (leadId) {
-      Object.assign(l, { name: nm, business: document.getElementById('f_ld_biz').value.trim(), phone: document.getElementById('f_ld_ph').value.trim(), service: document.getElementById('f_ld_sv').value, budget: Number(document.getElementById('f_ld_bg').value) || 0, followUpDate: document.getElementById('f_ld_fu').value, status: document.getElementById('f_ld_st').value });
+      Object.assign(l, { name: nm, business: document.getElementById('f_ld_biz').value.trim(), phone: document.getElementById('f_ld_ph').value.trim(), service: svVal, budget: Number(document.getElementById('f_ld_bg').value) || 0, followUpDate: document.getElementById('f_ld_fu').value, status: stVal });
     } else {
-      STATE.leads.push({ id: uid('ld'), name: nm, business: document.getElementById('f_ld_biz').value.trim(), phone: document.getElementById('f_ld_ph').value.trim(), service: document.getElementById('f_ld_sv').value, budget: Number(document.getElementById('f_ld_bg').value) || 0, followUpDate: document.getElementById('f_ld_fu').value, status: document.getElementById('f_ld_st').value, createdAt: new Date().toISOString() });
+      STATE.leads.push({ id: uid('ld'), name: nm, business: document.getElementById('f_ld_biz').value.trim(), phone: document.getElementById('f_ld_ph').value.trim(), service: svVal, budget: Number(document.getElementById('f_ld_bg').value) || 0, followUpDate: document.getElementById('f_ld_fu').value, status: stVal, createdAt: new Date().toISOString() });
     }
     saveState(); closeModal(); toast('Lead saved'); render();
   };
@@ -7187,7 +7482,11 @@ function openStaffModal(staffId = null) {
         <label>Role / Position</label>
         <select id="f_st_rl">
           ${STAFF_ROLES.map(r => `<option ${r === s.role ? 'selected' : ''}>${r}</option>`).join('')}
+          <option value="__custom__">➕ Custom Role / Title...</option>
         </select>
+        <div id="f_st_rl_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_st_rl_custom" placeholder="Enter custom role or position title" />
+        </div>
       </div>
       <div class="field">
         <label>Phone / WhatsApp Number</label>
@@ -7201,7 +7500,7 @@ function openStaffModal(staffId = null) {
         <input type="email" id="f_st_em" value="${esc(currentEmail)}" placeholder="e.g. rohan.mehta@gmail.com" required />
       </div>
       <div class="field">
-        <label>Monthly Base Salary (₹)</label>
+        <label>Monthly Base Salary (${STATE.settings.currencySymbol || '₹'})</label>
         <input type="number" id="f_st_sal" value="${s.baseSalary || 25000}" />
       </div>
     </div>
@@ -7234,10 +7533,25 @@ function openStaffModal(staffId = null) {
     </div>
   `, 540);
 
+  const stRlSel = document.getElementById('f_st_rl');
+  if (stRlSel) {
+    stRlSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_st_rl_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_st_rl_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveStBtn').onclick = async () => {
     const nm = document.getElementById('f_st_nm').value.trim();
     if (!nm) { toast('Staff full name is required'); return; }
-    const role = document.getElementById('f_st_rl').value;
+    
+    let role = document.getElementById('f_st_rl').value;
+    if (role === '__custom__') {
+      role = (document.getElementById('f_st_rl_custom') ? document.getElementById('f_st_rl_custom').value.trim() : '') || 'Specialist';
+    }
+
     const phone = document.getElementById('f_st_ph').value.trim();
     const email = document.getElementById('f_st_em').value.trim();
     const baseSalary = Number(document.getElementById('f_st_sal').value) || 0;
@@ -7545,7 +7859,7 @@ function openPaymentModal(clientId = null) {
 
     <div class="field-row">
       <div class="field">
-        <label>Payment Amount Received (₹) *</label>
+        <label>Payment Amount Received (${STATE.settings.currencySymbol || '₹'}) *</label>
         <input type="number" id="f_pm_am" value="${defaultPayAmount}" placeholder="${initialOut.pending > 0 ? initialOut.pending : '20000'}" autofocus required />
       </div>
       <div class="field">
@@ -7557,7 +7871,13 @@ function openPaymentModal(clientId = null) {
     <div class="field-row">
       <div class="field">
         <label>Payment Mode</label>
-        <select id="f_pm_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select>
+        <select id="f_pm_md">
+          ${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}
+          <option value="__custom__">➕ Custom Payment Mode...</option>
+        </select>
+        <div id="f_pm_md_custom_box" style="display:none; margin-top:6px;">
+          <input id="f_pm_md_custom" placeholder="Enter custom payment mode (e.g. Crypto / Wire / PDC)" />
+        </div>
       </div>
       <div class="field">
         <label>Payment Note / Reference</label>
@@ -7584,17 +7904,33 @@ function openPaymentModal(clientId = null) {
     };
   }
 
+  const pmMdSel = document.getElementById('f_pm_md');
+  if (pmMdSel) {
+    pmMdSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_pm_md_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_pm_md_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('savePmBtn').onclick = () => {
     const cid = clientId || document.getElementById('f_pm_cl').value;
     const am = Number(document.getElementById('f_pm_am').value);
     if (!am || am <= 0) { toast('Valid payment amount required'); return; }
+    
+    let modeVal = document.getElementById('f_pm_md').value;
+    if (modeVal === '__custom__') {
+      modeVal = (document.getElementById('f_pm_md_custom') ? document.getElementById('f_pm_md_custom').value.trim() : '') || 'Custom Payment';
+    }
+
     const payId = uid('pay');
     STATE.payments.push({
       id: payId,
       clientId: cid,
       amount: am,
       date: document.getElementById('f_pm_dt').value,
-      mode: document.getElementById('f_pm_md').value,
+      mode: modeVal,
       note: document.getElementById('f_pm_nt').value.trim()
     });
     saveState();
@@ -7608,19 +7944,69 @@ function openPaymentModal(clientId = null) {
 function openExpenseModal() {
   showModal(`
     <div class="modal-header"><h3 class="modal-title">Log Expense</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Category *</label><select id="f_ex_ct">${EXPENSE_CATEGORIES.map(c => `<option>${c}</option>`).join('')}</select></div>
+    <div class="field">
+      <label>Category *</label>
+      <select id="f_ex_ct">
+        ${EXPENSE_CATEGORIES.map(c => `<option>${c}</option>`).join('')}
+        <option value="__custom__">➕ Custom Category...</option>
+      </select>
+      <div id="f_ex_ct_custom_box" style="display:none; margin-top:6px;">
+        <input id="f_ex_ct_custom" placeholder="Enter custom expense category name" />
+      </div>
+    </div>
     <div class="field-row">
-      <div class="field"><label>Amount (₹) *</label><input type="number" id="f_ex_am" placeholder="4500" autofocus required /></div>
+      <div class="field"><label>Amount (${STATE.settings.currencySymbol || '₹'}) *</label><input type="number" id="f_ex_am" placeholder="4500" autofocus required /></div>
       <div class="field"><label>Date</label><input type="date" id="f_ex_dt" value="${todayStr()}" /></div>
     </div>
-    <div class="field"><label>Mode</label><select id="f_ex_md">${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}</select></div>
-    <div class="field"><label>Description</label><input id="f_ex_nt" placeholder="e.g. Studio Light Diffusers" /></div>
+    <div class="field">
+      <label>Mode</label>
+      <select id="f_ex_md">
+        ${PAYMENT_MODES.map(m => `<option>${m}</option>`).join('')}
+        <option value="__custom__">➕ Custom Payment Mode...</option>
+      </select>
+      <div id="f_ex_md_custom_box" style="display:none; margin-top:6px;">
+        <input id="f_ex_md_custom" placeholder="Enter custom payment mode (e.g. Petty Cash / Wire / Card)" />
+      </div>
+    </div>
+    <div class="field"><label>Description</label><input id="f_ex_nt" placeholder="e.g. Studio Light Diffusers / AWS Cloud Bill" /></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="saveExBtn">Save Expense</button></div>
   `, 500);
+
+  const exCtSel = document.getElementById('f_ex_ct');
+  if (exCtSel) {
+    exCtSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_ex_ct_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_ex_ct_custom'); if (inp) inp.focus(); }
+    };
+  }
+
+  const exMdSel = document.getElementById('f_ex_md');
+  if (exMdSel) {
+    exMdSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_ex_md_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_ex_md_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveExBtn').onclick = () => {
     const am = Number(document.getElementById('f_ex_am').value);
     if (!am) { toast('Valid amount required'); return; }
-    STATE.expenses.push({ id: uid('exp'), category: document.getElementById('f_ex_ct').value, amount: am, date: document.getElementById('f_ex_dt').value, mode: document.getElementById('f_ex_md').value, note: document.getElementById('f_ex_nt').value.trim() });
+
+    let catVal = document.getElementById('f_ex_ct').value;
+    if (catVal === '__custom__') {
+      catVal = (document.getElementById('f_ex_ct_custom') ? document.getElementById('f_ex_ct_custom').value.trim() : '') || 'Miscellaneous Expense';
+    }
+
+    let modeVal = document.getElementById('f_ex_md').value;
+    if (modeVal === '__custom__') {
+      modeVal = (document.getElementById('f_ex_md_custom') ? document.getElementById('f_ex_md_custom').value.trim() : '') || 'Cash';
+    }
+
+    STATE.expenses.push({ id: uid('exp'), category: catVal, amount: am, date: document.getElementById('f_ex_dt').value, mode: modeVal, note: document.getElementById('f_ex_nt').value.trim() });
     saveState(); closeModal(); toast(`Logged expense of ${fmtMoney(am)}`); render();
   };
 }
@@ -7628,18 +8014,48 @@ function openExpenseModal() {
 function openTaskModal(clientId = null) {
   showModal(`
     <div class="modal-header"><h3 class="modal-title">Assign Task</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div class="field"><label>Task Title *</label><input id="f_tk_tt" placeholder="e.g. Edit photoshoot reels" autofocus required /></div>
-    <div class="field"><label>Client</label><select id="f_tk_cl"><option value="">— Internal —</option>${STATE.clients.map(c => `<option value="${c.id}" ${c.id === clientId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Task Title *</label><input id="f_tk_tt" placeholder="e.g. Edit photoshoot reels / Complete tax audit" autofocus required /></div>
+    <div class="field"><label>Client Account</label><select id="f_tk_cl"><option value="">— Internal / General —</option>${STATE.clients.map(c => `<option value="${c.id}" ${c.id === clientId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field-row">
-      <div class="field"><label>Assign To</label><select id="f_tk_st">${STATE.staff.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Assign To</label><select id="f_tk_st">${STATE.staff.map(s => `<option value="${s.id}">${esc(s.name)} (${esc(s.role)})</option>`).join('')}</select></div>
       <div class="field"><label>Deadline</label><input type="date" id="f_tk_dl" value="${todayStr()}" /></div>
     </div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="saveTkBtn">Assign</button></div>
+    <div class="field">
+      <label>Priority</label>
+      <select id="f_tk_pr">
+        <option value="Urgent">🔥 Urgent Priority</option>
+        <option value="High">⚡ High Priority</option>
+        <option value="Medium" selected>📌 Medium Priority</option>
+        <option value="Low">☕ Low Priority</option>
+        <option value="__custom__">➕ Custom Priority...</option>
+      </select>
+      <div id="f_tk_pr_custom_box" style="display:none; margin-top:6px;">
+        <input id="f_tk_pr_custom" placeholder="Enter custom priority (e.g. Critical Milestone / P0)" />
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" id="saveTkBtn">Assign Task</button></div>
   `, 500);
+
+  const prSel = document.getElementById('f_tk_pr');
+  if (prSel) {
+    prSel.onchange = (e) => {
+      const isCust = e.target.value === '__custom__';
+      const box = document.getElementById('f_tk_pr_custom_box');
+      if (box) box.style.display = isCust ? 'block' : 'none';
+      if (isCust) { const inp = document.getElementById('f_tk_pr_custom'); if (inp) inp.focus(); }
+    };
+  }
+
   document.getElementById('saveTkBtn').onclick = () => {
     const tt = document.getElementById('f_tk_tt').value.trim();
     if (!tt) { toast('Title required'); return; }
-    STATE.tasks.push({ id: uid('tsk'), title: tt, clientId: document.getElementById('f_tk_cl').value || null, assignedTo: document.getElementById('f_tk_st').value || null, deadline: document.getElementById('f_tk_dl').value, priority: 'Medium', status: 'To Do' });
+
+    let prVal = document.getElementById('f_tk_pr').value;
+    if (prVal === '__custom__') {
+      prVal = (document.getElementById('f_tk_pr_custom') ? document.getElementById('f_tk_pr_custom').value.trim() : '') || 'Normal';
+    }
+
+    STATE.tasks.push({ id: uid('tsk'), title: tt, clientId: document.getElementById('f_tk_cl').value || null, assignedTo: document.getElementById('f_tk_st').value || null, deadline: document.getElementById('f_tk_dl').value, priority: prVal, status: 'To Do' });
     saveState(); closeModal(); toast('Task assigned'); render();
   };
 }
