@@ -413,38 +413,22 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   const db = readDb();
-  let user = db.allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase().trim());
+  const cleanEmail = email.toLowerCase().trim();
+  let user = (db.allUsers || []).find(u => u.email && u.email.toLowerCase() === cleanEmail);
 
   if (!user) {
-    // Dynamically provision user if not existing
-    const cleanRole = role || 'manager';
-    const compId = `comp_${Date.now()}`;
-    const compName = cleanRole === 'admin' ? 'AccountiX Platform HQ' : `${email.split('@')[0].toUpperCase()} Agency`;
-
-    user = {
-      id: `usr_${Date.now()}`,
-      name: email.split('@')[0].toUpperCase(),
-      email: email.trim(),
-      password: password,
-      role: cleanRole,
-      companyId: compId,
-      companyName: compName,
-      title: cleanRole === 'admin' ? 'Platform Super Admin' : cleanRole === 'manager' ? 'Managing Director' : 'Specialist',
-      avatar: cleanRole === 'admin' ? '👑' : cleanRole === 'manager' ? '🏢' : '👥',
-      lastActiveAt: new Date().toISOString(),
-      status: 'Active',
-      purchasedDate: new Date().toISOString().split('T')[0],
-      plan: 'Enterprise Suite'
-    };
-    db.allUsers.push(user);
-    if (!db.companies.find(c => c.id === compId)) {
-      db.companies.push({ id: compId, name: compName, plan: '1 Year Plan', status: 'Active', ownerEmail: email.trim(), createdAt: new Date().toISOString().split('T')[0], usersCount: 1, mrr: 999 });
-    }
+    return res.status(401).json({
+      success: false,
+      error: 'No account found with this email. Please register a new agency or contact your administrator.'
+    });
   }
 
-  // Verify password if set
+  // Strict Password Verification
   if (user.password && user.password !== password) {
-    return res.status(401).json({ success: false, error: 'Invalid password. Please check your credentials.' });
+    return res.status(401).json({
+      success: false,
+      error: 'Incorrect password. Please enter the correct password.'
+    });
   }
 
   user.lastActiveAt = new Date().toISOString();

@@ -2262,7 +2262,7 @@ function renderLandingGateway() {
         </div>
 
         <!-- 1-Click Google Sign-In Button -->
-        <button onclick="signInWithGoogle('${_authSelectedRole}')" style="width:100%; background:#ffffff; color:#0f172a; font-weight:800; font-size:14px; border:none; padding:12px 16px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15); transition:transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+        <button onclick="signInWithGoogle('manager')" style="width:100%; background:#ffffff; color:#0f172a; font-weight:800; font-size:14px; border:none; padding:12px 16px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15); transition:transform 0.15s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
             <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
@@ -2275,46 +2275,30 @@ function renderLandingGateway() {
         <!-- Divider -->
         <div style="display:flex; align-items:center; gap:12px; margin:20px 0;">
           <div style="flex:1; height:1px; background:#222f46;"></div>
-          <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">or email credentials</div>
+          <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">or official credentials</div>
           <div style="flex:1; height:1px; background:#222f46;"></div>
         </div>
 
-        <!-- Quick Role Switcher -->
-        <div style="margin-bottom:16px;">
-          <div style="font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Quick Demo Auto-Fill:</div>
-          <div style="display:flex; gap:6px;">
-            <button class="role-pill-btn" data-role="manager" onclick="selectAuthRole('manager')" style="flex:1; font-size:11px; font-weight:700; padding:6px 4px; border-radius:8px; border:1px solid ${_authSelectedRole === 'manager' ? '#6366f1' : '#222f46'}; background:${_authSelectedRole === 'manager' ? '#6366f1' : '#1a2338'}; color:${_authSelectedRole === 'manager' ? '#ffffff' : '#94a3b8'}; cursor:pointer;">
-              🏢 Director
-            </button>
-            <button class="role-pill-btn" data-role="admin" onclick="selectAuthRole('admin')" style="flex:1; font-size:11px; font-weight:700; padding:6px 4px; border-radius:8px; border:1px solid ${_authSelectedRole === 'admin' ? '#6366f1' : '#222f46'}; background:${_authSelectedRole === 'admin' ? '#6366f1' : '#1a2338'}; color:${_authSelectedRole === 'admin' ? '#ffffff' : '#94a3b8'}; cursor:pointer;">
-              👑 Admin
-            </button>
-            <button class="role-pill-btn" data-role="employee" onclick="selectAuthRole('employee')" style="flex:1; font-size:11px; font-weight:700; padding:6px 4px; border-radius:8px; border:1px solid ${_authSelectedRole === 'employee' ? '#6366f1' : '#222f46'}; background:${_authSelectedRole === 'employee' ? '#6366f1' : '#1a2338'}; color:${_authSelectedRole === 'employee' ? '#ffffff' : '#94a3b8'}; cursor:pointer;">
-              👥 Staff
-            </button>
-          </div>
-        </div>
-
         <!-- Form Fields -->
-        <form id="gatewayAuthForm" onsubmit="return false;">
+        <form id="gatewayAuthForm" onsubmit="submitGatewayAuthForm(); return false;">
           ${isReg ? `
-            <div class="field" style="margin-bottom:12px;">
+            <div class="field" style="margin-bottom:14px;">
               <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Your Full Name *</label>
-              <input type="text" id="gateway_reg_name" placeholder="e.g. Jeet Rakholiya" value="Jeet Rakholiya" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:10px 12px; width:100%; box-sizing:border-box;" required />
+              <input type="text" id="gateway_reg_name" placeholder="e.g. Jeet Rakholiya" value="" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box;" required />
             </div>
           ` : ''}
 
-          <div class="field" style="margin-bottom:12px;">
+          <div class="field" style="margin-bottom:14px;">
             <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Official Email Address *</label>
-            <input type="email" id="gateway_email" placeholder="name@agency.com" value="${_authSelectedRole === 'admin' ? 'admin@accountix.agency' : _authSelectedRole === 'employee' ? 'rohan@accountix.agency' : 'jeet@accountix.agency'}" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:10px 12px; width:100%; box-sizing:border-box;" required />
+            <input type="email" id="gateway_email" placeholder="e.g. name@agency.com" value="" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box;" required autofocus />
           </div>
 
-          <div class="field" style="margin-bottom:18px;">
+          <div class="field" style="margin-bottom:20px;">
             <label style="color:#cbd5e1; font-size:12px; font-weight:600;">Account Password *</label>
-            <input type="password" id="gateway_password" placeholder="Enter password" value="${_authSelectedRole === 'admin' ? 'admin@123' : _authSelectedRole === 'employee' ? 'staff@123' : 'agency@123'}" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:10px 12px; width:100%; box-sizing:border-box;" required />
+            <input type="password" id="gateway_password" placeholder="Enter your password" value="" style="background:#0b0f19; border:1px solid #222f46; color:#f8fafc; border-radius:8px; padding:11px 12px; width:100%; box-sizing:border-box;" required />
           </div>
 
-          <button id="btnSubmitGateway" type="button" onclick="submitGatewayAuthForm()" style="width:100%; background:linear-gradient(135deg, #6366f1, #4f46e5); color:#ffffff; font-weight:800; font-size:14px; border:none; padding:12px; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+          <button id="btnSubmitGateway" type="submit" style="width:100%; background:linear-gradient(135deg, #6366f1, #4f46e5); color:#ffffff; font-weight:800; font-size:14px; border:none; padding:13px; border-radius:10px; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.35);">
             ${isReg ? 'Create Account & Enter Workspace ➔' : 'Sign In to Workspace ➔'}
           </button>
         </form>
@@ -2332,7 +2316,7 @@ function renderLandingGateway() {
 
       <!-- Footer -->
       <div style="text-align:center; color:#64748b; font-size:11.5px; font-weight:500; margin-top:20px;">
-        AccountiX Enterprise Edition · Live JWT & Cross-Device Sync Active
+        AccountiX Enterprise Edition · Protected by 256-bit TLS & Verified JWT
       </div>
     </div>
   `;
@@ -2345,7 +2329,7 @@ async function submitGatewayAuthForm() {
   const name = isReg ? (document.getElementById('gateway_reg_name') ? document.getElementById('gateway_reg_name').value.trim() : '') : '';
 
   if (!email || !pass) {
-    toast('Please enter both email and password');
+    toast('Please enter your email and password');
     return;
   }
   if (isReg && !name) {
@@ -2359,38 +2343,32 @@ async function submitGatewayAuthForm() {
   let user = null;
   if (isReg) {
     if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
-      const regRes = await window.AccountiX_API.register(name, email, pass, pass, _authSelectedRole);
-      if (regRes && regRes.user) user = regRes.user;
+      const regRes = await window.AccountiX_API.register(name, email, pass, pass, 'manager');
+      if (regRes && regRes.success && regRes.user) {
+        user = regRes.user;
+      } else {
+        if (btn) btn.innerHTML = 'Create Account & Enter Workspace ➔';
+        toast('❌ ' + ((regRes && regRes.error) ? regRes.error : 'Registration failed. Please try again.'));
+        return;
+      }
     }
   } else {
     if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
-      const loginRes = await window.AccountiX_API.login(email, pass, _authSelectedRole);
-      if (loginRes && loginRes.user) user = loginRes.user;
+      const loginRes = await window.AccountiX_API.login(email, pass, 'manager');
+      if (loginRes && loginRes.success && loginRes.user) {
+        user = loginRes.user;
+      } else {
+        if (btn) btn.innerHTML = 'Sign In to Workspace ➔';
+        toast('❌ ' + ((loginRes && loginRes.error) ? loginRes.error : 'Incorrect email or password.'));
+        return;
+      }
     }
   }
 
   if (!user) {
-    user = (STATE.allUsers || []).find(u => u.email.toLowerCase() === email.toLowerCase()) || DEMO_PROFILES.find(p => p.email.toLowerCase() === email.toLowerCase());
-  }
-
-  if (!user) {
-    const isFounder = email.toLowerCase().includes('jeet') || email.toLowerCase().includes('admin');
-    user = {
-      id: `usr_${Date.now()}`,
-      name: name || (isFounder ? 'Jeet Rakholiya' : email.split('@')[0].toUpperCase()),
-      email: email,
-      password: pass,
-      role: _authSelectedRole,
-      companyId: isFounder ? 'comp_1' : `comp_${Date.now()}`,
-      companyName: _authSelectedRole === 'admin' ? 'AccountiX Platform HQ' : `${name || email.split('@')[0]}'s Agency`,
-      title: _authSelectedRole === 'admin' ? 'Platform Super Admin' : _authSelectedRole === 'manager' ? 'Managing Director' : 'Specialist',
-      avatar: _authSelectedRole === 'admin' ? '👑' : _authSelectedRole === 'manager' ? '🏢' : '👥',
-      lastActiveAt: new Date().toISOString(),
-      status: 'Active',
-      purchasedDate: todayStr(),
-      plan: '1 Year Plan'
-    };
-    STATE.allUsers.push(user);
+    if (btn) btn.innerHTML = isReg ? 'Create Account & Enter Workspace ➔' : 'Sign In to Workspace ➔';
+    toast('❌ Authentication failed. Please verify your credentials.');
+    return;
   }
 
   STATE.currentUser = { ...user };
