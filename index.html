@@ -1128,18 +1128,42 @@ let STATE = {
   clients: [], packages: [], payments: [], expenses: [], staff: [],
   attendance: [], salaryPayments: [], tasks: [], contentItems: [], leads: [],
   serviceCatalog: [...DEFAULT_SERVICE_CATALOG],
+  userData: [], // Universal Persistent User Storage backed by Supabase user_data table & RLS
   settings: { agencyName: 'AccountiX', tagline: 'Agency Business OS & Financial Engine', phone: '+91 98765 43210', email: 'hello@accountix.agency', currencySymbol: '₹', theme: 'dark' },
   view: 'dashboard', _search: '', _salesTab: 'pipeline', _workTab: 'kanban', _teamTab: 'staff', _moneyTab: 'profit', _clientTab: 'clients',
   _simTargetProfit: 150000,
   _adminTab: 'overview', _empTab: 'workspace', _empContentTab: 'all'
 };
 
-/* ================= SUPABASE CLOUD DATABASE SYNC ENGINE ================= */
+/* ================= SUPABASE CLOUD DATABASE & PERSISTENT STORAGE ENGINE ================= */
 const SUPABASE_URL_KEY = 'accountix_supabase_url';
 const SUPABASE_ANON_KEY = 'accountix_supabase_anon_key';
 let _supabaseClient = null;
 let _sbSyncTimer = null;
 let _isSyncingCloud = false;
+let _sbAuthSubscription = null;
+
+function showSessionLoading(msg = 'Restoring secure session & user data from Supabase... ⏳') {
+  let el = document.getElementById('sessionLoadingOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'sessionLoadingOverlay';
+    el.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(8,10,16,0.92); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; font-family:Plus Jakarta Sans, sans-serif; backdrop-filter:blur(8px);';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <div style="width:48px; height:48px; border:4px solid rgba(99,102,241,0.2); border-top-color:#6366f1; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+    <div style="color:#f8fafc; font-size:16px; font-weight:800; font-family:Space Grotesk, sans-serif; letter-spacing:-0.3px;">AccountiX</div>
+    <div style="color:#94a3b8; font-size:13px; font-weight:500;" id="sessionLoadingText">${esc(msg)}</div>
+  `;
+}
+window.showSessionLoading = showSessionLoading;
+
+function hideSessionLoading() {
+  const el = document.getElementById('sessionLoadingOverlay');
+  if (el) el.remove();
+}
+window.hideSessionLoading = hideSessionLoading;
 
 function getSupabaseCreds() {
   return {
@@ -1158,7 +1182,47 @@ function initSupabaseClient() {
   const { url, key } = getSupabaseCreds();
   if (url && key && window.supabase && typeof window.supabase.createClient === 'function') {
     try {
-      _supabaseClient = window.supabase.createClient(url, key);
+      _supabaseClient = window.supabase.createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+
+      // Setup Supabase Auth state change listener (Restores session, Login, Account switch)
+      if (_supabaseClient.auth && !_sbAuthSubscription) {
+        const { data: { subscription } } = _supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          console.log('⚡ Supabase Auth Event:', event);
+          if (session && session.user) {
+            const sbUser = session.user;
+            const cleanEmail = (sbUser.email || '').toLowerCase().trim();
+            const isSuperAdminEmail = cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com';
+            
+            STATE.currentUser = {
+              id: sbUser.id,
+              email: sbUser.email,
+              name: (sbUser.user_metadata && sbUser.user_metadata.name) || sbUser.email.split('@')[0],
+              role: isSuperAdminEmail ? 'admin' : ((sbUser.user_metadata && sbUser.user_metadata.role) || 'manager'),
+              isSuperAdmin: isSuperAdminEmail,
+              avatar: (sbUser.user_metadata && sbUser.user_metadata.avatar_url) || (isSuperAdminEmail ? '👑' : '🏢'),
+              companyName: STATE.settings ? STATE.settings.agencyName : 'AccountiX Media HQ'
+            };
+            STATE.isAuthenticated = true;
+            if (isSuperAdminEmail) {
+              STATE.activePanel = 'admin';
+              STATE.view = 'admin_overview';
+            }
+            await syncFromSupabase();
+            hideSessionLoading();
+            render();
+          } else if (event === 'SIGNED_OUT') {
+            hideSessionLoading();
+          }
+        });
+        _sbAuthSubscription = subscription;
+      }
+
       return _supabaseClient;
     } catch (e) {
       console.warn('Supabase init failed', e);
@@ -1178,35 +1242,207 @@ async function testSupabaseConnection() {
   if (!_supabaseClient) initSupabaseClient();
   if (!_supabaseClient) return { success: false, error: 'Missing Supabase URL or Anon Key' };
   try {
-    const { data, error } = await _supabaseClient.from('accountix_settings').select('*').limit(1);
-    if (error) return { success: false, error: error.message };
+    const { data, error } = await _supabaseClient.from('user_data').select('id').limit(1);
+    if (error && error.code !== 'PGRST116') {
+      const fallback = await _supabaseClient.from('accountix_settings').select('id').limit(1);
+      if (fallback.error) return { success: false, error: fallback.error.message };
+    }
     return { success: true, data };
   } catch (err) {
     return { success: false, error: err.message };
   }
 }
 
+/* ================= UNIVERSAL user_data PERSISTENCE CRUD ================= */
+async function fetchUserDataFromSupabase(showToast = false) {
+  if (!_supabaseClient) initSupabaseClient();
+  if (!_supabaseClient) return STATE.userData || [];
+  try {
+    const { data: { user } } = await _supabaseClient.auth.getUser();
+    if (!user) return STATE.userData || [];
+
+    const { data, error } = await _supabaseClient
+      .from('user_data')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      STATE.userData = data;
+      saveLocalState();
+      if (showToast) toast(`✓ Refreshed ${data.length} records from Supabase PostgreSQL`);
+      renderMain();
+    } else if (error) {
+      console.warn('user_data fetch note:', error.message);
+    }
+    return STATE.userData;
+  } catch (e) {
+    return STATE.userData || [];
+  }
+}
+window.fetchUserDataFromSupabase = fetchUserDataFromSupabase;
+
+async function insertUserDataRecord(title, content) {
+  if (!_supabaseClient) initSupabaseClient();
+  
+  if (!_supabaseClient) {
+    const localRec = {
+      id: uid('ud'),
+      title: title || '',
+      content: content || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    if (!STATE.userData) STATE.userData = [];
+    STATE.userData.unshift(localRec);
+    saveState();
+    renderMain();
+    toast('✓ Saved locally (Connect Supabase to store in cloud)');
+    return localRec;
+  }
+
+  try {
+    const { data: { user }, error: userErr } = await _supabaseClient.auth.getUser();
+    if (!user || userErr) {
+      toast('❌ Please sign in to Supabase to insert persistent data');
+      return null;
+    }
+
+    const { data, error } = await _supabaseClient
+      .from('user_data')
+      .insert({
+        user_id: user.id,
+        title: title || '',
+        content: content || '',
+        updated_at: new Date().toISOString()
+      })
+      .select();
+
+    if (error) {
+      toast('❌ Supabase error: ' + error.message);
+      return null;
+    }
+
+    const saved = data ? data[0] : null;
+    if (saved) {
+      if (!STATE.userData) STATE.userData = [];
+      STATE.userData.unshift(saved);
+      saveLocalState();
+      renderMain();
+      toast('✓ Permanently saved in Supabase PostgreSQL!');
+    }
+    return saved;
+  } catch (err) {
+    console.error('Insert user_data error:', err);
+    toast('❌ Error saving to Supabase');
+    return null;
+  }
+}
+window.insertUserDataRecord = insertUserDataRecord;
+
+async function updateUserDataRecord(recordId, title, content) {
+  if (!_supabaseClient) initSupabaseClient();
+
+  if (!_supabaseClient) {
+    const item = (STATE.userData || []).find(d => d.id === recordId);
+    if (item) {
+      item.title = title;
+      item.content = content;
+      item.updated_at = new Date().toISOString();
+      saveState();
+      renderMain();
+      toast('✓ Updated locally');
+    }
+    return;
+  }
+
+  try {
+    const { data, error } = await _supabaseClient
+      .from('user_data')
+      .update({
+        title,
+        content,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', recordId)
+      .select();
+
+    if (error) {
+      toast('❌ Supabase error: ' + error.message);
+      return;
+    }
+
+    const idx = (STATE.userData || []).findIndex(d => d.id === recordId);
+    if (idx !== -1 && data && data[0]) {
+      STATE.userData[idx] = data[0];
+      saveLocalState();
+      renderMain();
+      toast('✓ Record updated in Supabase PostgreSQL!');
+    }
+  } catch (err) {
+    console.error('Update user_data error:', err);
+    toast('❌ Error updating record');
+  }
+}
+window.updateUserDataRecord = updateUserDataRecord;
+
+async function deleteUserDataRecord(recordId) {
+  if (!_supabaseClient) initSupabaseClient();
+
+  if (!_supabaseClient) {
+    STATE.userData = (STATE.userData || []).filter(d => d.id !== recordId);
+    saveState();
+    renderMain();
+    toast('✓ Deleted locally');
+    return;
+  }
+
+  try {
+    const { error } = await _supabaseClient
+      .from('user_data')
+      .delete()
+      .eq('id', recordId);
+
+    if (error) {
+      toast('❌ Supabase error: ' + error.message);
+      return;
+    }
+
+    STATE.userData = (STATE.userData || []).filter(d => d.id !== recordId);
+    saveLocalState();
+    renderMain();
+    toast('✓ Record permanently deleted from Supabase PostgreSQL');
+  } catch (err) {
+    console.error('Delete user_data error:', err);
+    toast('❌ Error deleting record');
+  }
+}
+window.deleteUserDataRecord = deleteUserDataRecord;
+
+/* ================= COMPLETE ACCOUNTIX ENTITY CLOUD SYNCHRONIZATION ================= */
 async function syncFromSupabase() {
   if (!_supabaseClient) initSupabaseClient();
   if (!_supabaseClient || _isSyncingCloud) return;
   _isSyncingCloud = true;
 
   try {
+    const { data: { user } } = await _supabaseClient.auth.getUser();
+
     const [
-      cRes, stRes, pRes, pyRes, eRes, aRes, salRes, tRes, cntRes, lRes, catRes, setRes
+      cRes, stRes, pRes, pyRes, eRes, aRes, salRes, tRes, cntRes, lRes, catRes, setRes, udRes
     ] = await Promise.all([
-      _supabaseClient.from('accountix_clients').select('*'),
-      _supabaseClient.from('accountix_staff').select('*'),
-      _supabaseClient.from('accountix_packages').select('*'),
-      _supabaseClient.from('accountix_payments').select('*'),
-      _supabaseClient.from('accountix_expenses').select('*'),
-      _supabaseClient.from('accountix_attendance').select('*'),
-      _supabaseClient.from('accountix_salary_payments').select('*'),
-      _supabaseClient.from('accountix_tasks').select('*'),
-      _supabaseClient.from('accountix_content').select('*'),
-      _supabaseClient.from('accountix_leads').select('*'),
-      _supabaseClient.from('accountix_service_catalog').select('*'),
-      _supabaseClient.from('accountix_settings').select('*').limit(1)
+      _supabaseClient.from('accountix_clients').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_staff').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_packages').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_payments').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_expenses').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_attendance').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_salary_payments').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_tasks').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_content').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_leads').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_service_catalog').select('*').order('created_at', { ascending: false }),
+      _supabaseClient.from('accountix_settings').select('*').limit(1),
+      _supabaseClient.from('user_data').select('*').order('created_at', { ascending: false })
     ]);
 
     if (!cRes.error && cRes.data) {
@@ -1246,6 +1482,9 @@ async function syncFromSupabase() {
       const st = setRes.data[0];
       STATE.settings = { agencyName: st.agency_name, tagline: st.tagline, ownerName: st.owner_name, phone: st.phone, email: st.email, currencySymbol: st.currency_symbol, theme: st.theme };
     }
+    if (!udRes.error && udRes.data) {
+      STATE.userData = udRes.data.map(u => ({ id: u.id, title: u.title, content: u.content, created_at: u.created_at, updated_at: u.updated_at }));
+    }
 
     saveLocalState();
     renderMain();
@@ -1261,9 +1500,13 @@ async function pushToSupabaseBulk() {
   if (!_supabaseClient) return { success: false, error: 'Supabase client not connected' };
 
   try {
+    const { data: { user } } = await _supabaseClient.auth.getUser();
+    const userId = user ? user.id : (STATE.currentUser ? STATE.currentUser.id : null);
+    if (!userId) return { success: false, error: 'No authenticated user ID' };
+
     if (STATE.settings) {
       await _supabaseClient.from('accountix_settings').upsert({
-        id: 'primary_agency_settings',
+        user_id: userId,
         agency_name: STATE.settings.agencyName,
         tagline: STATE.settings.tagline,
         owner_name: STATE.settings.ownerName,
@@ -1272,72 +1515,78 @@ async function pushToSupabaseBulk() {
         currency_symbol: STATE.settings.currencySymbol,
         theme: STATE.settings.theme,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'user_id' });
     }
 
     if (STATE.serviceCatalog && STATE.serviceCatalog.length) {
       await _supabaseClient.from('accountix_service_catalog').upsert(
-        STATE.serviceCatalog.map(s => ({ id: s.id, name: s.name, default_amount: s.defaultAmount, cycle: s.cycle, description: s.description }))
+        STATE.serviceCatalog.map(s => ({ id: s.id, user_id: userId, name: s.name, default_amount: s.defaultAmount, cycle: s.cycle, description: s.description, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.staff && STATE.staff.length) {
       await _supabaseClient.from('accountix_staff').upsert(
-        STATE.staff.map(s => ({ id: s.id, name: s.name, role: s.role, phone: s.phone, base_salary: s.baseSalary, status: s.status }))
+        STATE.staff.map(s => ({ id: s.id, user_id: userId, name: s.name, role: s.role, phone: s.phone, base_salary: s.baseSalary, status: s.status, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.clients && STATE.clients.length) {
       await _supabaseClient.from('accountix_clients').upsert(
-        STATE.clients.map(c => ({ id: c.id, name: c.name, company: c.company, mobile: c.mobile, whatsapp: c.whatsapp, instagram: c.instagram, status: c.status, created_at: c.createdAt || new Date().toISOString() }))
+        STATE.clients.map(c => ({ id: c.id, user_id: userId, name: c.name, company: c.company, mobile: c.mobile, whatsapp: c.whatsapp, instagram: c.instagram, status: c.status, created_at: c.createdAt || new Date().toISOString(), updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.packages && STATE.packages.length) {
       await _supabaseClient.from('accountix_packages').upsert(
-        STATE.packages.map(p => ({ id: p.id, client_id: p.clientId, service_type: p.serviceType, amount: p.amount, start_date: p.startDate, end_date: p.endDate, assigned_staff_id: p.assignedStaffId || null, status: p.status }))
+        STATE.packages.map(p => ({ id: p.id, user_id: userId, client_id: p.clientId, service_type: p.serviceType, amount: p.amount, start_date: p.startDate, end_date: p.endDate, assigned_staff_id: p.assignedStaffId || null, status: p.status, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.payments && STATE.payments.length) {
       await _supabaseClient.from('accountix_payments').upsert(
-        STATE.payments.map(p => ({ id: p.id, client_id: p.clientId, package_id: p.packageId || null, amount: p.amount, date: p.date, mode: p.mode, note: p.note }))
+        STATE.payments.map(p => ({ id: p.id, user_id: userId, client_id: p.clientId, package_id: p.packageId || null, amount: p.amount, date: p.date, mode: p.mode, note: p.note, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.expenses && STATE.expenses.length) {
       await _supabaseClient.from('accountix_expenses').upsert(
-        STATE.expenses.map(e => ({ id: e.id, category: e.category, amount: e.amount, date: e.date, mode: e.mode, note: e.note, staff_id: e.staffId || null }))
+        STATE.expenses.map(e => ({ id: e.id, user_id: userId, category: e.category, amount: e.amount, date: e.date, mode: e.mode, note: e.note, staff_id: e.staffId || null, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.attendance && STATE.attendance.length) {
       await _supabaseClient.from('accountix_attendance').upsert(
-        STATE.attendance.map(a => ({ id: a.id, staff_id: a.staffId, date: a.date, status: a.status, check_in: a.checkIn }))
+        STATE.attendance.map(a => ({ id: a.id, user_id: userId, staff_id: a.staffId, date: a.date, status: a.status, check_in: a.checkIn, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.salaryPayments && STATE.salaryPayments.length) {
       await _supabaseClient.from('accountix_salary_payments').upsert(
-        STATE.salaryPayments.map(s => ({ id: s.id, staff_id: s.staffId, month: s.month, base: s.base, incentive: s.incentive, advance: s.advance, deduction: s.deduction, final_payable: s.finalPayable, paid_on: s.paidOn }))
+        STATE.salaryPayments.map(s => ({ id: s.id, user_id: userId, staff_id: s.staffId, month: s.month, base: s.base, incentive: s.incentive, advance: s.advance, deduction: s.deduction, final_payable: s.finalPayable, paid_on: s.paidOn, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.tasks && STATE.tasks.length) {
       await _supabaseClient.from('accountix_tasks').upsert(
-        STATE.tasks.map(t => ({ id: t.id, title: t.title, client_id: t.clientId || null, assigned_to: t.assignedTo || null, deadline: t.deadline, priority: t.priority, status: t.status }))
+        STATE.tasks.map(t => ({ id: t.id, user_id: userId, title: t.title, client_id: t.clientId || null, assigned_to: t.assignedTo || null, deadline: t.deadline, priority: t.priority, status: t.status, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.contentItems && STATE.contentItems.length) {
       await _supabaseClient.from('accountix_content').upsert(
-        STATE.contentItems.map(c => ({ id: c.id, client_id: c.clientId, date: c.date, type: c.type, topic: c.topic, shoot_by_id: c.shootById || null, assigned_staff_id: c.assignedStaffId || null, status: c.status, drive_link: c.driveLink, caption: c.caption }))
+        STATE.contentItems.map(c => ({ id: c.id, user_id: userId, client_id: c.clientId, date: c.date, type: c.type, topic: c.topic, shoot_by_id: c.shootById || null, assigned_staff_id: c.assignedStaffId || null, status: c.status, drive_link: c.driveLink, caption: c.caption, updated_at: new Date().toISOString() }))
       );
     }
 
     if (STATE.leads && STATE.leads.length) {
       await _supabaseClient.from('accountix_leads').upsert(
-        STATE.leads.map(l => ({ id: l.id, name: l.name, business: l.business, phone: l.phone, service: l.service, budget: l.budget, follow_up_date: l.followUpDate, status: l.status, created_at: l.createdAt || new Date().toISOString() }))
+        STATE.leads.map(l => ({ id: l.id, user_id: userId, name: l.name, business: l.business, phone: l.phone, service: l.service, budget: l.budget, follow_up_date: l.followUpDate, status: l.status, created_at: l.createdAt || new Date().toISOString(), updated_at: new Date().toISOString() }))
+      );
+    }
+
+    if (STATE.userData && STATE.userData.length) {
+      await _supabaseClient.from('user_data').upsert(
+        STATE.userData.map(u => ({ id: u.id, user_id: userId, title: u.title, content: u.content, updated_at: new Date().toISOString() }))
       );
     }
 
@@ -1623,21 +1872,20 @@ const AccountiX_API = {
     }
   },
   applyWorkspaceData(ws) {
-    if (!ws || typeof ws !== 'object') return;
-    if (Array.isArray(ws.clients)) STATE.clients = ws.clients;
-    if (Array.isArray(ws.packages)) STATE.packages = ws.packages;
-    if (Array.isArray(ws.payments)) STATE.payments = ws.payments;
-    if (Array.isArray(ws.expenses)) STATE.expenses = ws.expenses;
-    if (Array.isArray(ws.staff)) STATE.staff = ws.staff;
-    if (Array.isArray(ws.attendance)) STATE.attendance = ws.attendance;
-    if (Array.isArray(ws.salaryPayments)) STATE.salaryPayments = ws.salaryPayments;
-    if (Array.isArray(ws.tasks)) STATE.tasks = ws.tasks;
-    if (Array.isArray(ws.contentItems)) STATE.contentItems = ws.contentItems;
-    if (Array.isArray(ws.leads)) STATE.leads = ws.leads;
-    if (Array.isArray(ws.serviceCatalog) && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
-    if (ws.settings && typeof ws.settings === 'object' && Object.keys(ws.settings).length) {
-      STATE.settings = { ...STATE.settings, ...ws.settings };
-    }
+    if (!ws) return;
+    if (ws.clients && ws.clients.length) STATE.clients = ws.clients;
+    else if (!STATE.clients || !STATE.clients.length) seedData();
+    if (ws.packages && ws.packages.length) STATE.packages = ws.packages;
+    if (ws.payments && ws.payments.length) STATE.payments = ws.payments;
+    if (ws.expenses && ws.expenses.length) STATE.expenses = ws.expenses;
+    if (ws.staff && ws.staff.length) STATE.staff = ws.staff;
+    if (ws.attendance) STATE.attendance = ws.attendance;
+    if (ws.salaryPayments) STATE.salaryPayments = ws.salaryPayments;
+    if (ws.tasks) STATE.tasks = ws.tasks;
+    if (ws.contentItems) STATE.contentItems = ws.contentItems;
+    if (ws.leads) STATE.leads = ws.leads;
+    if (ws.serviceCatalog && ws.serviceCatalog.length) STATE.serviceCatalog = ws.serviceCatalog;
+    if (ws.settings && Object.keys(ws.settings).length) STATE.settings = { ...STATE.settings, ...ws.settings };
     saveLocalState();
   }
 };
@@ -1648,22 +1896,16 @@ function queueWorkspaceSync() {
   clearTimeout(_wsSyncTimer);
   _wsSyncTimer = setTimeout(() => {
     AccountiX_API.syncWorkspace(STATE);
-  }, 800);
+  }, 1000);
 }
 
 function saveLocalState() {
   try {
-    const { _search, ...persistable } = STATE;
-    persistable._isSaved = true;
-    const serialized = JSON.stringify(persistable);
-    localStorage.setItem(STORAGE_KEY, serialized);
+    const { view, _search, _salesTab, _workTab, _teamTab, _moneyTab, _clientTab, _simTargetProfit, _attDate, _reportTab, ...persistable } = STATE;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistable));
     const userEmail = (STATE.currentUser && STATE.currentUser.email) ? STATE.currentUser.email.toLowerCase().trim() : '';
     if (userEmail) {
-      localStorage.setItem('accountix_state_' + userEmail, serialized);
-    }
-    const compId = (STATE.currentUser && STATE.currentUser.companyId) ? STATE.currentUser.companyId : '';
-    if (compId) {
-      localStorage.setItem('accountix_state_comp_' + compId, serialized);
+      localStorage.setItem('accountix_state_' + userEmail, JSON.stringify(persistable));
     }
   } catch (e) { console.error('Save failed', e); }
 }
@@ -1674,7 +1916,8 @@ function saveState() {
   queueWorkspaceSync();
 }
 
-function loadStateSync() {
+async function loadState() {
+  showSessionLoading('Restoring secure session & user data from Supabase... ⏳');
   try {
     let raw = null;
     const token = AccountiX_API.getToken();
@@ -1693,8 +1936,10 @@ function loadStateSync() {
       raw = localStorage.getItem(STORAGE_KEY);
     }
     if (raw) {
-      const saved = JSON.parse(raw);
-      Object.assign(STATE, saved);
+      Object.assign(STATE, JSON.parse(raw));
+      if (!STATE.clients || !STATE.clients.length) {
+        seedData();
+      }
       if (!STATE.serviceCatalog || !STATE.serviceCatalog.length) {
         STATE.serviceCatalog = [...DEFAULT_SERVICE_CATALOG];
       }
@@ -1702,67 +1947,52 @@ function loadStateSync() {
       seedData();
     }
   } catch (e) {
-    console.warn('loadStateSync note:', e);
     seedData();
   }
   if (STATE.settings && STATE.settings.theme) {
     document.documentElement.setAttribute('data-theme', STATE.settings.theme);
   }
-}
 
-async function loadState() {
-  loadStateSync();
-  render();
+  // Check Supabase Auth session & PostgreSQL data
+  if (isSupabaseConnected()) {
+    try {
+      const { data: { user }, error: uErr } = await _supabaseClient.auth.getUser();
+      if (user && !uErr) {
+        const cleanEmail = (user.email || '').toLowerCase().trim();
+        const isSuperAdminEmail = cleanEmail === 'jeetrakholiya02@gmail.com' || cleanEmail === 'jeetrakholiya@gmail.com';
+        STATE.currentUser = {
+          id: user.id,
+          email: user.email,
+          name: (user.user_metadata && user.user_metadata.name) || user.email.split('@')[0],
+          role: isSuperAdminEmail ? 'admin' : ((user.user_metadata && user.user_metadata.role) || 'manager'),
+          isSuperAdmin: isSuperAdminEmail,
+          avatar: (user.user_metadata && user.user_metadata.avatar_url) || (isSuperAdminEmail ? '👑' : '🏢'),
+          companyName: STATE.settings ? STATE.settings.agencyName : 'AccountiX Media HQ'
+        };
+        STATE.isAuthenticated = true;
+        if (isSuperAdminEmail) {
+          STATE.activePanel = 'admin';
+          STATE.view = 'admin_overview';
+        }
+        await syncFromSupabase();
+      }
+    } catch (sbErr) {
+      console.warn('Supabase session restoration note:', sbErr);
+    }
+  }
 
-  // Attempt backend JWT session & workspace hydration
+  // Attempt backend JWT session & workspace hydration as secondary fallback
   try {
     const me = await AccountiX_API.fetchMe();
     if (me && me.user) {
       console.log('✓ JWT Session Authenticated:', me.user.name);
-      render();
     }
     await AccountiX_API.fetchLogs();
   } catch(e) {}
 
-  // If Supabase credentials configured, trigger background sync
-  if (isSupabaseConnected()) {
-    try {
-      await syncFromSupabase();
-      render();
-    } catch(e) {}
-  }
+  hideSessionLoading();
+  render();
 }
-
-// Window Unload & Visibility Auto-Save Safety Net
-window.addEventListener('beforeunload', () => {
-  saveLocalState();
-  if (navigator.sendBeacon && STATE.currentUser) {
-    try {
-      const email = (STATE.currentUser.email || '').toLowerCase().trim();
-      const companyId = STATE.currentUser.companyId || 'comp_1';
-      const blob = new Blob([JSON.stringify({
-        email,
-        companyId,
-        clients: STATE.clients || [],
-        packages: STATE.packages || [],
-        payments: STATE.payments || [],
-        expenses: STATE.expenses || [],
-        staff: STATE.staff || [],
-        attendance: STATE.attendance || [],
-        salaryPayments: STATE.salaryPayments || [],
-        tasks: STATE.tasks || [],
-        contentItems: STATE.contentItems || [],
-        leads: STATE.leads || [],
-        serviceCatalog: STATE.serviceCatalog || [],
-        settings: STATE.settings || {}
-      })], { type: 'application/json' });
-      navigator.sendBeacon('/api/workspace/sync', blob);
-    } catch(e) {}
-  }
-});
-window.addEventListener('pagehide', () => {
-  saveLocalState();
-});
 
 function seedData() {
   const ym = currentYM();
@@ -1984,6 +2214,7 @@ function getNavItems() {
       { id: 'admin_logs', label: 'Login & Access Logs', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>' },
       { id: 'admin_reengage', label: 'Inactive User Mailer', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' },
       { id: 'admin_plans', label: 'SaaS Plans & Tiers', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>' },
+      { id: 'user_data', label: 'Persistent Vault', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
       { id: 'settings', label: 'System & Security', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V19a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H5a2 2 0 110-4h.2a1.7 1.7 0 001.6-1 1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H11a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V11a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.6 1z"/></svg>' }
     ];
   } else if (currentPanel === 'employee') {
@@ -2003,6 +2234,7 @@ function getNavItems() {
       { id: 'sales', label: 'Sales CRM', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l6-6 4 4 8-8"/><path d="M21 2h-6M21 2v6"/></svg>' },
       { id: 'team', label: 'Team & Payroll', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="3.5"/><path d="M2 20c0-4 3-7 7-7s7 3 7 7"/><path d="M16 4.5c1.7.4 3 2 3 3.9 0 1.9-1.3 3.5-3 3.9M20 20c0-3-1.8-5.5-4.5-6.5"/></svg>' },
       { id: 'finance', label: 'Financials & Cash', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2.5"/><circle cx="12" cy="12.5" r="3"/><path d="M6 6V5a2 2 0 012-2h8a2 2 0 012 2v1"/></svg>' },
+      { id: 'user_data', label: 'Persistent Vault & Notes', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>' },
       { id: 'reports', label: 'Reports & Export', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>' },
       { id: 'settings', label: 'Settings', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V19a2 2 0 11-4 0v-.2a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H5a2 2 0 110-4h.2a1.7 1.7 0 001.6-1 1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H11a1.7 1.7 0 001-1.6V3a2 2 0 114 0v.2a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V11a1.7 1.7 0 001.6 1H21a2 2 0 110 4h-.2a1.7 1.7 0 00-1.6 1z"/></svg>' }
     ];
@@ -2529,26 +2761,77 @@ async function submitGatewayAuthForm() {
   if (btn) btn.innerHTML = isReg ? 'Creating Workspace... ⏳' : 'Signing In... ⏳';
 
   let user = null;
-  if (isReg) {
-    if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
-      const regRes = await window.AccountiX_API.register(name, email, pass, pass, chosenRole);
-      if (regRes && regRes.success && regRes.user) {
-        user = regRes.user;
+
+  // 1. Try Supabase Auth First if connected
+  if (isSupabaseConnected()) {
+    try {
+      if (isReg) {
+        const { data: sbData, error: sbErr } = await _supabaseClient.auth.signUp({
+          email: email.trim(),
+          password: pass,
+          options: {
+            data: {
+              name: name || email.split('@')[0],
+              role: chosenRole || 'manager'
+            }
+          }
+        });
+        if (sbErr) {
+          console.warn('Supabase signUp note:', sbErr.message);
+        } else if (sbData && sbData.user) {
+          const sbU = sbData.user;
+          user = {
+            id: sbU.id,
+            email: sbU.email,
+            name: (sbU.user_metadata && sbU.user_metadata.name) || name || sbU.email.split('@')[0],
+            role: (sbU.user_metadata && sbU.user_metadata.role) || chosenRole || 'manager'
+          };
+        }
       } else {
-        if (btn) btn.innerHTML = 'Create Account & Enter Workspace ➔';
-        toast('❌ ' + ((regRes && regRes.error) ? regRes.error : 'Registration failed. Please try again.'));
-        return;
+        const { data: sbData, error: sbErr } = await _supabaseClient.auth.signInWithPassword({
+          email: email.trim(),
+          password: pass
+        });
+        if (sbErr) {
+          console.warn('Supabase signIn note:', sbErr.message);
+        } else if (sbData && sbData.user) {
+          const sbU = sbData.user;
+          user = {
+            id: sbU.id,
+            email: sbU.email,
+            name: (sbU.user_metadata && sbU.user_metadata.name) || sbU.email.split('@')[0],
+            role: (sbU.user_metadata && sbU.user_metadata.role) || 'manager'
+          };
+        }
       }
+    } catch (sbEx) {
+      console.warn('Supabase Auth error:', sbEx);
     }
-  } else {
-    if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
-      const loginRes = await window.AccountiX_API.login(email, pass, 'manager');
-      if (loginRes && loginRes.success && loginRes.user) {
-        user = loginRes.user;
-      } else {
-        if (btn) btn.innerHTML = 'Sign In to Workspace ➔';
-        toast('❌ ' + ((loginRes && loginRes.error) ? loginRes.error : 'Incorrect email or password.'));
-        return;
+  }
+
+  // 2. Fallback to API Client / Local Engine if Supabase not connected or as sync layer
+  if (!user) {
+    if (isReg) {
+      if (window.AccountiX_API && typeof window.AccountiX_API.register === 'function') {
+        const regRes = await window.AccountiX_API.register(name, email, pass, pass, chosenRole);
+        if (regRes && regRes.success && regRes.user) {
+          user = regRes.user;
+        } else {
+          if (btn) btn.innerHTML = 'Create Account & Enter Workspace ➔';
+          toast('❌ ' + ((regRes && regRes.error) ? regRes.error : 'Registration failed. Please try again.'));
+          return;
+        }
+      }
+    } else {
+      if (window.AccountiX_API && typeof window.AccountiX_API.login === 'function') {
+        const loginRes = await window.AccountiX_API.login(email, pass, 'manager');
+        if (loginRes && loginRes.success && loginRes.user) {
+          user = loginRes.user;
+        } else {
+          if (btn) btn.innerHTML = 'Sign In to Workspace ➔';
+          toast('❌ ' + ((loginRes && loginRes.error) ? loginRes.error : 'Incorrect email or password.'));
+          return;
+        }
       }
     }
   }
@@ -2575,7 +2858,12 @@ async function submitGatewayAuthForm() {
   STATE.currentUser = { ...user };
   STATE.isAuthenticated = true;
 
-  recordLoginAudit(user, isReg ? 'Registration Verified (JWT)' : 'Email & Password (JWT Verified)');
+  // Sync latest user records from Supabase
+  if (isSupabaseConnected()) {
+    await syncFromSupabase();
+  }
+
+  recordLoginAudit(user, isReg ? 'Registration Verified (Supabase/JWT)' : 'Email & Password (Supabase/JWT Verified)');
   saveState();
   render();
   toast(`✓ Welcome, ${user.name}! ${isSuperAdminEmail ? 'Super Admin Mode Active' : 'Workspace loaded'}.`);
@@ -2733,6 +3021,13 @@ window.loginGateway = loginGateway;
 async function logoutGateway() {
   const user = STATE.currentUser;
   STATE.isAuthenticated = false;
+  if (_supabaseClient) {
+    try {
+      await _supabaseClient.auth.signOut();
+    } catch(e) {
+      console.warn('Supabase signOut note:', e);
+    }
+  }
   if (user && window.AccountiX_API && typeof window.AccountiX_API.logout === 'function') {
     await window.AccountiX_API.logout(user);
   }
@@ -4300,6 +4595,7 @@ function renderMain() {
     case 'sales': main.innerHTML = renderSalesView(); attachSales(); break;
     case 'team': main.innerHTML = renderTeamView(); attachTeam(); break;
     case 'finance': main.innerHTML = renderFinanceView(); attachFinance(); break;
+    case 'user_data': main.innerHTML = renderUserDataView(); attachUserData(); break;
     case 'reports': main.innerHTML = renderReportsView(); attachReports(); break;
     case 'settings': main.innerHTML = renderSettingsView(); attachSettings(); break;
     default:
@@ -4312,6 +4608,205 @@ function renderMain() {
       }
   }
 }
+
+/* ================= UNIVERSAL user_data PERSISTENT STORAGE VIEW ================= */
+function renderUserDataView() {
+  const list = STATE.userData || [];
+  const sbConnected = isSupabaseConnected();
+  const user = STATE.currentUser || {};
+
+  return `
+    <div class="view-header" style="margin-bottom:20px;">
+      <div>
+        <h1 class="view-title" style="display:flex; align-items:center; gap:10px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Persistent User Data & Cloud Notes (Supabase PostgreSQL)
+        </h1>
+        <p class="view-sub" style="color:var(--text-secondary);">
+          Direct PostgreSQL permanent storage secured with Row Level Security (<code class="mono" style="color:var(--signal-cash); font-weight:700;">auth.uid() = user_id</code>). All changes persist across browser restarts, page refreshes, logouts, and all devices.
+        </p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-primary" onclick="openNewUserDataModal()">
+          <span>+</span> Add Persistent Record
+        </button>
+        <button class="btn btn-ghost" onclick="fetchUserDataFromSupabase(true)">
+          <span>🔄</span> Refresh Supabase
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Supabase Status Alert Card -->
+    <div class="card" style="margin-bottom:20px; background:linear-gradient(135deg, rgba(99,102,241,0.08), rgba(16,185,129,0.08)); border:1px solid rgba(99,102,241,0.3); border-radius:14px; padding:16px 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:42px; height:42px; border-radius:12px; background:rgba(99,102,241,0.18); display:flex; align-items:center; justify-content:center; font-size:22px;">
+            ${sbConnected ? '⚡' : '💾'}
+          </div>
+          <div>
+            <div style="font-weight:800; font-size:14.5px; color:var(--text-primary);">
+              ${sbConnected ? 'Supabase PostgreSQL RLS Active' : 'Local Storage Cache Mode'}
+            </div>
+            <div style="font-size:12.5px; color:var(--text-secondary); margin-top:2px;">
+              ${sbConnected ? `Authenticated User: <b>${esc(user.email || user.name || 'User')}</b> · User ID (<code class="mono" style="color:var(--signal-cash); font-size:11px;">auth.uid()</code>): <code class="mono" style="font-size:11.5px; color:var(--brand);">${esc(user.id || 'Active')}</code>` : 'Configure your Supabase Project URL & Anon Key in Settings to link with PostgreSQL.'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="pill ${sbConnected ? 'pill-green' : 'pill-amber'}" style="font-size:11.5px; padding:4px 12px; font-weight:700;">
+            ${sbConnected ? '🟢 Live PostgreSQL Connected' : '🟡 Offline Mode'}
+          </span>
+          <span class="pill pill-blue" style="font-size:11.5px; padding:4px 12px; font-weight:700;">
+            ${list.length} Records Stored
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Records Grid -->
+    ${list.length === 0 ? `
+      <div class="card" style="padding:56px 24px; text-align:center; border:2px dashed var(--border-card); border-radius:16px;">
+        <div style="font-size:48px; margin-bottom:14px;">📁</div>
+        <h3 style="font-size:18px; font-weight:800; color:var(--text-primary); margin-bottom:6px;">No Saved Records Yet</h3>
+        <p style="font-size:13.5px; color:var(--text-secondary); max-width:480px; margin:0 auto 22px auto; line-height:1.6;">
+          Create your first persistent note or structured record. It is saved directly to your Supabase PostgreSQL database table <code class="mono">user_data</code> with user isolation.
+        </p>
+        <button class="btn btn-primary" onclick="openNewUserDataModal()">
+          <span>+</span> Create First Persistent Record
+        </button>
+      </div>
+    ` : `
+      <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px;">
+        ${list.map(r => `
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; border:1px solid var(--border-card); border-radius:14px; padding:18px; transition:border-color 0.15s ease;" onmouseover="this.style.borderColor='var(--brand)'" onmouseout="this.style.borderColor='var(--border-card)'">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                <h3 style="font-size:15px; font-weight:800; color:var(--text-primary); margin:0;">${esc(r.title || 'Untitled Record')}</h3>
+                <span class="pill pill-purple" style="font-size:9.5px; padding:2px 7px;">PostgreSQL</span>
+              </div>
+              <p style="font-size:13px; color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; margin:0 0 16px 0;">${esc(r.content || '')}</p>
+            </div>
+            <div style="padding-top:12px; border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-size:11px; color:var(--text-muted);">
+                <span>🕒 ${r.created_at ? fmtDate(r.created_at.slice(0, 10)) : 'Recent'}</span>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-ghost btn-sm" onclick="openEditUserDataModal('${r.id}')" style="padding:3px 8px; font-size:11px;" title="Edit record in Supabase">
+                  ✏️ Edit
+                </button>
+                <button class="btn btn-danger-ghost btn-sm" onclick="confirmDeleteUserData('${r.id}')" style="padding:3px 8px; font-size:11px;" title="Delete record from Supabase">
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `}
+  `;
+}
+
+function attachUserData() {}
+
+function openNewUserDataModal() {
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">📝 Add Persistent Record</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Permanently stored in Supabase PostgreSQL (Table: <code class="mono">user_data</code>)</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;">
+      <label>Record Title *</label>
+      <input id="f_ud_title" placeholder="e.g. Q3 Agency Retainer Strategy" required autofocus style="width:100%; box-sizing:border-box;" />
+    </div>
+
+    <div class="field" style="margin-bottom:18px;">
+      <label>Content / Body *</label>
+      <textarea id="f_ud_content" rows="6" placeholder="Enter persistent content or notes..." style="width:100%; box-sizing:border-box; background:var(--bg-card); border:1px solid var(--border-card); color:var(--text-primary); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="btnSaveNewUserData">💾 Save to Supabase</button>
+    </div>
+  `, 540);
+
+  document.getElementById('btnSaveNewUserData').onclick = async () => {
+    const title = document.getElementById('f_ud_title').value.trim();
+    const content = document.getElementById('f_ud_content').value.trim();
+    if (!title) {
+      toast('Please enter a record title');
+      return;
+    }
+    const btn = document.getElementById('btnSaveNewUserData');
+    btn.innerHTML = 'Saving to Supabase... ⏳';
+    btn.disabled = true;
+
+    await insertUserDataRecord(title, content);
+    closeModal();
+  };
+}
+window.openNewUserDataModal = openNewUserDataModal;
+
+function openEditUserDataModal(id) {
+  const item = (STATE.userData || []).find(d => d.id === id);
+  if (!item) return;
+
+  showModal(`
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title">✏️ Edit Persistent Record</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Record ID: <code class="mono">${id}</code></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;">
+      <label>Record Title *</label>
+      <input id="f_ud_edit_title" value="${esc(item.title || '')}" required autofocus style="width:100%; box-sizing:border-box;" />
+    </div>
+
+    <div class="field" style="margin-bottom:18px;">
+      <label>Content / Body *</label>
+      <textarea id="f_ud_edit_content" rows="6" style="width:100%; box-sizing:border-box; background:var(--bg-card); border:1px solid var(--border-card); color:var(--text-primary); border-radius:8px; padding:10px; font-family:inherit;">${esc(item.content || '')}</textarea>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <button class="btn btn-danger-ghost btn-sm" onclick="confirmDeleteUserData('${id}')">🗑️ Delete Record</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="btnUpdateUserData">💾 Update in Supabase</button>
+      </div>
+    </div>
+  `, 540);
+
+  document.getElementById('btnUpdateUserData').onclick = async () => {
+    const title = document.getElementById('f_ud_edit_title').value.trim();
+    const content = document.getElementById('f_ud_edit_content').value.trim();
+    if (!title) {
+      toast('Please enter a record title');
+      return;
+    }
+    const btn = document.getElementById('btnUpdateUserData');
+    btn.innerHTML = 'Updating... ⏳';
+    btn.disabled = true;
+
+    await updateUserDataRecord(id, title, content);
+    closeModal();
+  };
+}
+window.openEditUserDataModal = openEditUserDataModal;
+
+function confirmDeleteUserData(id) {
+  if (confirm('Are you sure you want to permanently delete this record from Supabase PostgreSQL?')) {
+    deleteUserDataRecord(id);
+    closeModal();
+  }
+}
+window.confirmDeleteUserData = confirmDeleteUserData;
 
 /* ---------- 1. DASHBOARD WITH INTERACTIVE REVENUE SIMULATOR ---------- */
 function renderDashboardView() {
@@ -6975,138 +7470,42 @@ function attachSettings() {
 
 function openSqlSchemaModal() {
   const sql = `-- ==============================================================================
--- AccountiX Agency Business OS & Financial Engine — Supabase PostgreSQL Schema
--- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
+-- AccountiX Agency Business OS & Persistent Storage Schema with Supabase Auth & RLS
+-- Run this in Supabase SQL Editor (Dashboard > SQL Editor > New Query)
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-CREATE TABLE IF NOT EXISTS accountix_clients (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    company TEXT,
-    mobile TEXT,
-    whatsapp TEXT,
-    instagram TEXT,
-    status TEXT DEFAULT 'Active',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_staff (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    role TEXT,
-    phone TEXT,
-    base_salary NUMERIC DEFAULT 0,
-    status TEXT DEFAULT 'Active',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_packages (
-    id TEXT PRIMARY KEY,
-    client_id TEXT REFERENCES accountix_clients(id) ON DELETE CASCADE,
-    service_type TEXT NOT NULL,
-    amount NUMERIC NOT NULL DEFAULT 0,
-    start_date DATE,
-    end_date DATE,
-    assigned_staff_id TEXT REFERENCES accountix_staff(id) ON DELETE SET NULL,
-    status TEXT DEFAULT 'Active',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_payments (
-    id TEXT PRIMARY KEY,
-    client_id TEXT REFERENCES accountix_clients(id) ON DELETE CASCADE,
-    package_id TEXT REFERENCES accountix_packages(id) ON DELETE SET NULL,
-    amount NUMERIC NOT NULL DEFAULT 0,
-    date DATE NOT NULL,
-    mode TEXT DEFAULT 'UPI',
-    note TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_expenses (
-    id TEXT PRIMARY KEY,
-    category TEXT NOT NULL,
-    amount NUMERIC NOT NULL DEFAULT 0,
-    date DATE NOT NULL,
-    mode TEXT DEFAULT 'Bank Transfer',
-    note TEXT,
-    staff_id TEXT REFERENCES accountix_staff(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_attendance (
-    id TEXT PRIMARY KEY,
-    staff_id TEXT REFERENCES accountix_staff(id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    status TEXT DEFAULT 'Present',
-    check_in TEXT,
+-- 1. Universal User Data Table (Persistent Storage with RLS)
+CREATE TABLE IF NOT EXISTS user_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT,
+    content TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE (staff_id, date)
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS accountix_salary_payments (
-    id TEXT PRIMARY KEY,
-    staff_id TEXT REFERENCES accountix_staff(id) ON DELETE CASCADE,
-    month TEXT NOT NULL,
-    base NUMERIC DEFAULT 0,
-    incentive NUMERIC DEFAULT 0,
-    advance NUMERIC DEFAULT 0,
-    deduction NUMERIC DEFAULT 0,
-    final_payable NUMERIC DEFAULT 0,
-    paid_on DATE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_tasks (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    client_id TEXT REFERENCES accountix_clients(id) ON DELETE CASCADE,
-    assigned_to TEXT REFERENCES accountix_staff(id) ON DELETE SET NULL,
-    deadline DATE,
-    priority TEXT DEFAULT 'Medium',
-    status TEXT DEFAULT 'To Do',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_content (
-    id TEXT PRIMARY KEY,
-    client_id TEXT REFERENCES accountix_clients(id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    type TEXT NOT NULL,
-    topic TEXT,
-    shoot_by_id TEXT REFERENCES accountix_staff(id) ON DELETE SET NULL,
-    assigned_staff_id TEXT REFERENCES accountix_staff(id) ON DELETE SET NULL,
-    status TEXT DEFAULT 'Idea',
-    drive_link TEXT,
-    caption TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_leads (
-    id TEXT PRIMARY KEY,
+-- 2. Core Application Tables
+CREATE TABLE IF NOT EXISTS accountix_user_profile (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
     name TEXT NOT NULL,
-    business TEXT,
-    phone TEXT,
-    service TEXT,
-    budget NUMERIC DEFAULT 0,
-    follow_up_date DATE,
-    status TEXT DEFAULT 'New',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS accountix_service_catalog (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    default_amount NUMERIC NOT NULL DEFAULT 0,
-    cycle TEXT DEFAULT 'Monthly Retainer',
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    avatar_url TEXT,
+    role TEXT DEFAULT 'manager',
+    company_name TEXT DEFAULT 'My Agency',
+    title TEXT DEFAULT 'Agency Managing Director',
+    plan TEXT DEFAULT 'Enterprise Suite',
+    last_active_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS accountix_settings (
-    id TEXT PRIMARY KEY DEFAULT 'primary_agency_settings',
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     agency_name TEXT DEFAULT 'AccountiX',
     tagline TEXT DEFAULT 'Agency Business OS & Financial Engine',
     owner_name TEXT DEFAULT 'Managing Director',
@@ -7114,9 +7513,160 @@ CREATE TABLE IF NOT EXISTS accountix_settings (
     email TEXT,
     currency_symbol TEXT DEFAULT '₹',
     theme TEXT DEFAULT 'dark',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS accountix_clients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    company TEXT,
+    mobile TEXT,
+    whatsapp TEXT,
+    instagram TEXT,
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS accountix_staff (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    role TEXT,
+    phone TEXT,
+    base_salary NUMERIC DEFAULT 0,
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_packages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES accountix_clients(id) ON DELETE CASCADE,
+    service_type TEXT NOT NULL,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    start_date DATE,
+    end_date DATE,
+    assigned_staff_id UUID REFERENCES accountix_staff(id) ON DELETE SET NULL,
+    status TEXT DEFAULT 'Active',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES accountix_clients(id) ON DELETE CASCADE,
+    package_id UUID REFERENCES accountix_packages(id) ON DELETE SET NULL,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    date DATE NOT NULL,
+    mode TEXT DEFAULT 'UPI (GPay / PhonePe / Paytm)',
+    note TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    amount NUMERIC NOT NULL DEFAULT 0,
+    date DATE NOT NULL,
+    mode TEXT DEFAULT 'Bank Transfer (NEFT/IMPS/RTGS)',
+    note TEXT,
+    staff_id UUID REFERENCES accountix_staff(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_attendance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    staff_id UUID REFERENCES accountix_staff(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    status TEXT DEFAULT 'Present',
+    check_in TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_salary_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    staff_id UUID REFERENCES accountix_staff(id) ON DELETE CASCADE,
+    month TEXT NOT NULL,
+    base NUMERIC DEFAULT 0,
+    incentive NUMERIC DEFAULT 0,
+    advance NUMERIC DEFAULT 0,
+    deduction NUMERIC DEFAULT 0,
+    final_payable NUMERIC DEFAULT 0,
+    paid_on DATE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    client_id UUID REFERENCES accountix_clients(id) ON DELETE SET NULL,
+    assigned_to UUID REFERENCES accountix_staff(id) ON DELETE SET NULL,
+    deadline DATE,
+    priority TEXT DEFAULT 'Medium',
+    status TEXT DEFAULT 'To Do',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_content (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    client_id UUID REFERENCES accountix_clients(id) ON DELETE SET NULL,
+    date DATE NOT NULL,
+    type TEXT NOT NULL,
+    topic TEXT,
+    shoot_by_id UUID REFERENCES accountix_staff(id) ON DELETE SET NULL,
+    assigned_staff_id UUID REFERENCES accountix_staff(id) ON DELETE SET NULL,
+    status TEXT DEFAULT 'Idea',
+    drive_link TEXT,
+    caption TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    business TEXT,
+    phone TEXT,
+    service TEXT,
+    budget NUMERIC DEFAULT 0,
+    follow_up_date DATE,
+    status TEXT DEFAULT 'New',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS accountix_service_catalog (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    default_amount NUMERIC NOT NULL DEFAULT 0,
+    cycle TEXT DEFAULT 'Monthly Retainer',
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Row Level Security (RLS) Policies
+ALTER TABLE user_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accountix_user_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accountix_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_clients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_staff ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_packages ENABLE ROW LEVEL SECURITY;
@@ -7128,52 +7678,95 @@ ALTER TABLE accountix_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accountix_service_catalog ENABLE ROW LEVEL SECURITY;
-ALTER TABLE accountix_settings ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Allow all clients" ON accountix_clients;
-DROP POLICY IF EXISTS "Allow all staff" ON accountix_staff;
-DROP POLICY IF EXISTS "Allow all packages" ON accountix_packages;
-DROP POLICY IF EXISTS "Allow all payments" ON accountix_payments;
-DROP POLICY IF EXISTS "Allow all expenses" ON accountix_expenses;
-DROP POLICY IF EXISTS "Allow all attendance" ON accountix_attendance;
-DROP POLICY IF EXISTS "Allow all salary payments" ON accountix_salary_payments;
-DROP POLICY IF EXISTS "Allow all tasks" ON accountix_tasks;
-DROP POLICY IF EXISTS "Allow all content" ON accountix_content;
-DROP POLICY IF EXISTS "Allow all leads" ON accountix_leads;
-DROP POLICY IF EXISTS "Allow all service catalog" ON accountix_service_catalog;
-DROP POLICY IF EXISTS "Allow all settings" ON accountix_settings;
+CREATE POLICY "Users can view own data" ON user_data FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own data" ON user_data FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own data" ON user_data FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own data" ON user_data FOR DELETE USING (auth.uid() = user_id);
 
-CREATE POLICY "Allow all clients" ON accountix_clients FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all staff" ON accountix_staff FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all packages" ON accountix_packages FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all payments" ON accountix_payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all expenses" ON accountix_expenses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all attendance" ON accountix_attendance FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all salary payments" ON accountix_salary_payments FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all tasks" ON accountix_tasks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all content" ON accountix_content FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all leads" ON accountix_leads FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all service catalog" ON accountix_service_catalog FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all settings" ON accountix_settings FOR ALL USING (true) WITH CHECK (true);`;
+CREATE POLICY "Users can view own profile" ON accountix_user_profile FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own profile" ON accountix_user_profile FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own profile" ON accountix_user_profile FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own profile" ON accountix_user_profile FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own settings" ON accountix_settings FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own settings" ON accountix_settings FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own settings" ON accountix_settings FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own settings" ON accountix_settings FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own clients" ON accountix_clients FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own clients" ON accountix_clients FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own clients" ON accountix_clients FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own clients" ON accountix_clients FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own staff" ON accountix_staff FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own staff" ON accountix_staff FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own staff" ON accountix_staff FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own staff" ON accountix_staff FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own packages" ON accountix_packages FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own packages" ON accountix_packages FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own packages" ON accountix_packages FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own packages" ON accountix_packages FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own payments" ON accountix_payments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own payments" ON accountix_payments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own payments" ON accountix_payments FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own payments" ON accountix_payments FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own expenses" ON accountix_expenses FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own expenses" ON accountix_expenses FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own expenses" ON accountix_expenses FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own expenses" ON accountix_expenses FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own attendance" ON accountix_attendance FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own attendance" ON accountix_attendance FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own attendance" ON accountix_attendance FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own attendance" ON accountix_attendance FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own salary payments" ON accountix_salary_payments FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own salary payments" ON accountix_salary_payments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own salary payments" ON accountix_salary_payments FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own salary payments" ON accountix_salary_payments FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own tasks" ON accountix_tasks FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own tasks" ON accountix_tasks FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own tasks" ON accountix_tasks FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own tasks" ON accountix_tasks FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own content" ON accountix_content FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own content" ON accountix_content FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own content" ON accountix_content FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own content" ON accountix_content FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own leads" ON accountix_leads FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own leads" ON accountix_leads FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own leads" ON accountix_leads FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own leads" ON accountix_leads FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own catalog" ON accountix_service_catalog FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own catalog" ON accountix_service_catalog FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own catalog" ON accountix_service_catalog FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own catalog" ON accountix_service_catalog FOR DELETE USING (auth.uid() = user_id);`;
 
   showModal(`
     <div class="modal-header">
       <div>
-        <h3 class="modal-title">Supabase SQL Schema Script</h3>
-        <div style="font-size:12px; color:var(--text-muted);">Run this in your Supabase Dashboard > SQL Editor to initialize all 12 tables</div>
+        <h3 class="modal-title">Supabase SQL Schema & RLS Security Script</h3>
+        <div style="font-size:12px; color:var(--text-muted);">Run in Supabase Dashboard > SQL Editor to initialize all tables with Row Level Security (RLS)</div>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
     <div class="field" style="margin-bottom:12px;">
-      <textarea id="sqlSchemaText" rows="14" style="font-family:'JetBrains Mono', monospace; font-size:11px; line-height:1.5;" readonly>${sql}</textarea>
+      <textarea id="sqlSchemaText" rows="15" style="font-family:'JetBrains Mono', monospace; font-size:11px; line-height:1.5; width:100%; box-sizing:border-box; background:var(--bg-subtle); color:var(--text-primary); border:1px solid var(--border-card); border-radius:8px; padding:10px;" readonly>${sql}</textarea>
     </div>
 
-    <div class="modal-actions">
+    <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:8px;">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
       <button class="btn btn-primary" id="copySqlBtn">📋 Copy SQL to Clipboard</button>
     </div>
-  `, 680);
+  `, 720);
 
   const copyBtn = document.getElementById('copySqlBtn');
   if (copyBtn) {
@@ -7181,7 +7774,7 @@ CREATE POLICY "Allow all settings" ON accountix_settings FOR ALL USING (true) WI
       const textarea = document.getElementById('sqlSchemaText');
       textarea.select();
       navigator.clipboard.writeText(textarea.value).then(() => {
-        toast('SQL Schema copied to clipboard! Paste it into Supabase SQL Editor.');
+        toast('✓ SQL Schema copied to clipboard! Paste it into Supabase SQL Editor.');
       });
     };
   }
