@@ -2375,15 +2375,15 @@ function openProfessionSelectModal() {
 window.openProfessionSelectModal = openProfessionSelectModal;
 
 function openSetTargetModal(defaultProfKey = null) {
-  const currTarget = Number(STATE._simTargetProfit) || 150000;
-  const currAvg = Number(STATE._simAvgRetainer) || 45000;
+  const currTarget = STATE._simTargetProfit ? Number(STATE._simTargetProfit) : '';
+  const currAvg = STATE._simAvgRetainer ? Number(STATE._simAvgRetainer) : '';
   const currentProf = defaultProfKey || (STATE.settings && STATE.settings.profession) || 'general';
   const prof = getProfessionConfig(currentProf);
   const customCfg = (STATE.settings && STATE.settings.customProfessionConfig) || {};
 
-  const defNeeded = (STATE._simCustomClients !== undefined && STATE._simCustomClients !== null) ? Number(STATE._simCustomClients) : Math.max(1, Math.ceil(currTarget / (currAvg * 0.6)));
-  const defOutput = (STATE._simCustomOutput !== undefined && STATE._simCustomOutput !== null) ? Number(STATE._simCustomOutput) : Math.round(defNeeded * 2.8);
-  const defTeam = (STATE._simCustomTeam !== undefined && STATE._simCustomTeam !== null) ? Number(STATE._simCustomTeam) : Math.max(1, Math.ceil(defNeeded / 4));
+  const defNeeded = (STATE._simCustomClients !== undefined && STATE._simCustomClients !== null) ? STATE._simCustomClients : '';
+  const defOutput = (STATE._simCustomOutput !== undefined && STATE._simCustomOutput !== null) ? STATE._simCustomOutput : '';
+  const defTeam = (STATE._simCustomTeam !== undefined && STATE._simCustomTeam !== null) ? STATE._simCustomTeam : '';
 
   showModal(`
     <div class="modal-header">
@@ -2396,7 +2396,7 @@ function openSetTargetModal(defaultProfKey = null) {
 
     <div class="field" style="margin-bottom:14px;">
       <label style="font-weight:700;">Target Monthly Net Profit (${STATE.settings.currencySymbol || '₹'}) *</label>
-      <input type="number" id="f_target_amount" value="${currTarget}" step="5000" min="5000" style="font-size:18px; font-weight:800; color:var(--signal-cash); font-family:'JetBrains Mono', monospace;" required autofocus />
+      <input type="number" id="f_target_amount" value="${currTarget}" placeholder="Enter monthly target (e.g. 150000)" step="5000" min="1000" style="font-size:18px; font-weight:800; color:var(--signal-cash); font-family:'JetBrains Mono', monospace;" required autofocus />
     </div>
 
     <!-- Quick Preset Chips -->
@@ -2404,7 +2404,7 @@ function openSetTargetModal(defaultProfKey = null) {
       <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; margin-bottom:8px; text-transform:uppercase;">Quick Target Presets:</div>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         ${[50000, 100000, 200000, 350000, 500000, 1000000, 2500000].map(amt => `
-          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('f_target_amount').value = ${amt}; calculateCapacityFromFormulas();" style="font-size:11.5px; padding:4px 10px; font-weight:700;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('f_target_amount').value = ${amt}; calculateCapacityFromFormulas(true);" style="font-size:11.5px; padding:4px 10px; font-weight:700;">
             ${fmtMoney(amt)}
           </button>
         `).join('')}
@@ -2414,7 +2414,7 @@ function openSetTargetModal(defaultProfKey = null) {
     <div class="field-row" style="margin-bottom:16px;">
       <div class="field">
         <label style="font-weight:700;">Average Client Retainer / Contract Ticket (${STATE.settings.currencySymbol || '₹'})</label>
-        <input type="number" id="f_target_avg_ticket" value="${currAvg}" step="1000" min="500" oninput="calculateCapacityFromFormulas()" />
+        <input type="number" id="f_target_avg_ticket" value="${currAvg}" placeholder="e.g. 45000" step="1000" min="500" oninput="calculateCapacityFromFormulas(false)" />
       </div>
       <div class="field">
         <label style="font-weight:700;">Active Business Profession</label>
@@ -2445,21 +2445,21 @@ function openSetTargetModal(defaultProfKey = null) {
       <div class="field-row" style="margin-bottom:0;">
         <div class="field" style="margin-bottom:0;">
           <label style="font-size:11px;">Client / Account Term</label>
-          <input id="f_cust_cl_term" value="${esc(customCfg.clientTerm || 'Client Accounts')}" placeholder="e.g. Patients, Students, Clients" />
+          <input id="f_cust_cl_term" value="${esc(customCfg.clientTerm || '')}" placeholder="e.g. Patients, Students, Clients" />
         </div>
         <div class="field" style="margin-bottom:0;">
           <label style="font-size:11px;">Deliverables / Work Term</label>
-          <input id="f_cust_del_term" value="${esc(customCfg.deliverableTerm || 'Monthly Deliverables')}" placeholder="e.g. Treatments, 3D Plans, Orders" />
+          <input id="f_cust_del_term" value="${esc(customCfg.deliverableTerm || '')}" placeholder="e.g. Treatments, 3D Plans, Orders" />
         </div>
         <div class="field" style="margin-bottom:0;">
           <label style="font-size:11px;">Team Specialists Term</label>
-          <input id="f_cust_tm_term" value="${esc(customCfg.teamTerm || 'Team Specialists')}" placeholder="e.g. Doctors, Architects, Staff" />
+          <input id="f_cust_tm_term" value="${esc(customCfg.teamTerm || '')}" placeholder="e.g. Doctors, Architects, Staff" />
         </div>
       </div>
     </div>
 
     <!-- DIRECTLY EDITABLE OPERATING CAPACITY & METRIC GOALS -->
-    <div style="background:var(--bg-subtle); border:1px solid var(--border-card); border-radius:12px; padding:16px; margin-bottom:20px;">
+    <div style="background:var(--bg-subtle); border:1.5px solid var(--border-card); border-radius:12px; padding:16px; margin-bottom:16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <div style="font-size:12px; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:0.5px;">
           📊 Operating Capacity & Target Volumes (Directly Editable):
@@ -2471,34 +2471,34 @@ function openSetTargetModal(defaultProfKey = null) {
 
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
         <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
-          <label id="lbl_target_clients" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
-            Target Client Accounts
+          <label id="lbl_target_clients" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:6px; min-height:16px;">
+            ${esc(prof.clientTerm || 'Target Accounts')}
           </label>
-          <input type="number" id="f_target_clients" value="${defNeeded}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--signal-cash); text-align:center;" />
-          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Active accounts goal</div>
+          <input type="number" id="f_target_clients" value="${defNeeded}" placeholder="e.g. 5" min="1" step="1" style="width:100%; box-sizing:border-box; background:var(--bg-subtle); color:var(--signal-cash); border:1.5px solid var(--border-card); border-radius:8px; padding:10px 8px; font-size:18px; font-weight:800; text-align:center; font-family:'JetBrains Mono', monospace;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:5px;">Active accounts goal</div>
         </div>
 
         <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
-          <label id="lbl_target_output" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
-            Monthly Output Volume
+          <label id="lbl_target_output" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:6px; min-height:16px;">
+            ${esc(prof.deliverableTerm || 'Monthly Output')}
           </label>
-          <input type="number" id="f_target_output" value="${defOutput}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--brand); text-align:center;" />
-          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Monthly deliverables</div>
+          <input type="number" id="f_target_output" value="${defOutput}" placeholder="e.g. 14" min="1" step="1" style="width:100%; box-sizing:border-box; background:var(--bg-subtle); color:var(--brand); border:1.5px solid var(--border-card); border-radius:8px; padding:10px 8px; font-size:18px; font-weight:800; text-align:center; font-family:'JetBrains Mono', monospace;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:5px;">Monthly deliverables</div>
         </div>
 
         <div style="padding:12px; background:var(--bg-card); border-radius:8px; border:1px solid var(--border-subtle);">
-          <label id="lbl_target_team" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">
-            Team Capacity / Staff
+          <label id="lbl_target_team" style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:block; margin-bottom:6px; min-height:16px;">
+            ${esc(prof.teamTerm || 'Team Capacity')}
           </label>
-          <input type="number" id="f_target_team" value="${defTeam}" min="1" step="1" style="font-size:18px; font-weight:800; color:var(--accent-cyan); text-align:center;" />
-          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">Execution workforce</div>
+          <input type="number" id="f_target_team" value="${defTeam}" placeholder="e.g. 2" min="1" step="1" style="width:100%; box-sizing:border-box; background:var(--bg-subtle); color:var(--accent-cyan); border:1.5px solid var(--border-card); border-radius:8px; padding:10px 8px; font-size:18px; font-weight:800; text-align:center; font-family:'JetBrains Mono', monospace;" />
+          <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:5px;">Execution workforce</div>
         </div>
       </div>
     </div>
 
-    <div style="display:flex; justify-content:flex-end; gap:8px;">
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border-subtle);">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="btnSaveTargetConfig">🎯 Save Business Target</button>
+      <button class="btn btn-primary" id="btnSaveTargetConfig" style="padding:10px 20px; font-weight:800; font-size:13.5px;">🎯 Save Business Target</button>
     </div>
   `, 620);
 
@@ -2537,8 +2537,16 @@ function openSetTargetModal(defaultProfKey = null) {
   window.updateTermLabels = updateTermLabels;
 
   function calculateCapacityFromFormulas(force = false) {
-    const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
-    const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
+    const tVal = document.getElementById('f_target_amount').value;
+    const aVal = document.getElementById('f_target_avg_ticket').value;
+
+    if (!tVal && !force) {
+      updateTermLabels();
+      return;
+    }
+
+    const tAmt = Number(tVal) || 150000;
+    const aAmt = Number(aVal) || 45000;
 
     const needed = Math.max(1, Math.ceil(tAmt / (aAmt * 0.6)));
     const estimatedWork = Math.round(needed * 2.8);
@@ -2571,9 +2579,12 @@ function openSetTargetModal(defaultProfKey = null) {
   document.getElementById('f_target_amount').oninput = () => calculateCapacityFromFormulas(false);
 
   document.getElementById('btnSaveTargetConfig').onclick = () => {
-    const tAmt = Number(document.getElementById('f_target_amount').value) || 150000;
-    const aAmt = Number(document.getElementById('f_target_avg_ticket').value) || 45000;
+    const tVal = document.getElementById('f_target_amount').value.trim();
+    const aVal = document.getElementById('f_target_avg_ticket').value.trim();
     const pKey = document.getElementById('f_target_prof').value;
+
+    const tAmt = Number(tVal) || 150000;
+    const aAmt = Number(aVal) || 45000;
 
     const clientsCount = Number(document.getElementById('f_target_clients').value) || Math.max(1, Math.ceil(tAmt / (aAmt * 0.6)));
     const outputCount = Number(document.getElementById('f_target_output').value) || Math.round(clientsCount * 2.8);
